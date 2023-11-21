@@ -1,0 +1,11 @@
+services:
+  # Service for the first container using an image that's built from the Dockerfile
+  flask_model_1:
+    build: .
+    ports:
+      - "5000:80"
+  # Service for the second container using an image that's built from the Dockerfile
+  flask_model_2:
+    build: .
+    ports:
+      - "5001:80"
