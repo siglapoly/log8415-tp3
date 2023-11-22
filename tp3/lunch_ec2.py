@@ -17,7 +17,7 @@ def lunch_ec2():
     
     # lunch instances 5 of type m4.large 
     # The instance in zone us-east-1a is for the orchestrator and the 4 other ones are workers
-    lunched = create_instances('m4.large',keypair_name,[security_group_id], ['us-east-1a','us-east-1b', 'us-east-1c', 'us-east-1d', 'us-east-1e']) 
+    lunched = create_instances('m4.large',keypair_name,[security_group_id], ['us-east-1a'])#,'us-east-1b', 'us-east-1c', 'us-east-1d', 'us-east-1e']) 
 
 # function that creates and saves an ssh key pair. It also gives read only permission to the file  
 def create_key_pair():
@@ -64,7 +64,7 @@ def set_file_permissions(file_path):
 def create_security_group():
 
     try:
-        # Create a security group allowing HTTP (port 80), HTTPS (port 443), for the containers (port 5000 and 5001) and shh (port 22) traffic
+        # Create a security group allowing HTTP (port 80), HTTPS (port 443) and shh (port 22) traffic
         response = ec2.create_security_group(
             Description='This security group is for the bot',
             GroupName='botSecurityGroup',
@@ -87,22 +87,19 @@ def create_security_group():
             ToPort=443,
             CidrIp='0.0.0.0/0'  # Open to all traffic 
         )
-        # Authorize inbound traffic for container1 (port 5000) 
+
+        # Authorize inbound traffic for port 3006 for mysql
+        mysql_rule = {
+        'IpProtocol': 'tcp',
+        'FromPort': 3306,
+        'ToPort': 3306,
+        'IpRanges': [{'CidrIp': '0.0.0.0/0'}]  # Update this to the appropriate CIDR range
+        }
         ec2.authorize_security_group_ingress(
-            GroupId=security_group_id,
-            IpProtocol='tcp',
-            FromPort=5000,
-            ToPort=5000,
-            CidrIp='0.0.0.0/0'  # Open to all traffic 
+        GroupId=security_group_id,
+        IpPermissions=[mysql_rule]
         )
-        # Authorize inbound traffic for container2 (port 5001) 
-        ec2.authorize_security_group_ingress(
-            GroupId=security_group_id,
-            IpProtocol='tcp',
-            FromPort=5001,
-            ToPort=5001,
-            CidrIp='0.0.0.0/0'  # Open to all traffic 
-        )
+
         # Authorize inbound traffic for ssh (port 22)
         ec2.authorize_security_group_ingress(
             GroupId=security_group_id,
@@ -181,15 +178,15 @@ if __name__ == '__main__':
     global ec2
     global aws_console
 
-    print("This script launches overall 4 EC2 workers instances of type M4.Large in Availability Zones : 'us-east-1b', 'us-east-1c', 'us-east-1d', 'us-east-1e' . And 1 EC2 orchestrator intance in Availability Zone us-east-1a  \n")          
-    if len(sys.argv) != 5:
-        print("Usage: python lunch.py <aws_access_key_id> <aws_secret_access_key> <aws_session_token> <aws_region>")
-        sys.exit(1)
+    #print("This script launches overall 4 EC2 workers instances of type M4.Large in Availability Zones : 'us-east-1b', 'us-east-1c', 'us-east-1d', 'us-east-1e' . And 1 EC2 orchestrator intance in Availability Zone us-east-1a  \n")          
+    #if len(sys.argv) != 5:
+    #    print("Usage: python lunch.py <aws_access_key_id> <aws_secret_access_key> <aws_session_token> <aws_region>")
+    #    sys.exit(1)
  
-    aws_access_key_id = sys.argv[1]
-    aws_secret_access_key = sys.argv[2]
-    aws_session_token = sys.argv[3]
-    aws_region = sys.argv[4]
+    aws_access_key_id='ASIAQDC3YUDEUN3Q52UU'
+    aws_secret_access_key='UIPTih4VxGKaA/3Woqxsy1Jy3V7hVRiUqzKGkWHQ'
+    aws_session_token='FwoGZXIvYXdzENj//////////wEaDC1FxNDYpH29nFYWuyLIAYWtJ+NDUp6pQbW1hzcb6CvlU1XsuFam/kywvFCIRM+Bc6wg3pDoLeNLsIVQnOxNmMFTZt0wCTDB4oxmHu859RZBp1oj73yT7S425I6RD6kHTTTi6u7HsW/yzm1EV0wczryjlRLS7nFeO1vD4+IPRCZnVdyIhAuSxJ2eFvEYNPRV4ZgqkyKU1MqtHFzuT8mLv6tPJw/p0K30J2yXRxy/RhO9NSEFBEzDeD7V6CWKiuXdIvSwkCgxn70bymk6pbdM00KfiWh1SA80KMHi9KoGMi0ZIO2umB5cJXbrbc9QrpCYgHWwKn/oNH6/t/+JyaIklV0QEnt2itIhuVkWZGI='
+    aws_region = 'us-east-1'
 
     
     # Create a a boto3 session with credentials 

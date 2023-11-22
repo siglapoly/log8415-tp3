@@ -1,0 +1,9 @@
+cp -r /mnt/c/users/simon/onedrive/documents/github/log8415tp3/tp3 tp3 
+
+mySQL binds to 127.0.0.1 by default -> check in security groups
+
+to send sakila db as compressed to instance 
+scp -o StrictHostKeyChecking=no -i bot.pem sakila-db.tar.gz ubuntu@ec2-44-192-57-36.compute-1.amazonaws.com:/home/ubuntu/
+
+
+https://dev.mysql.com/doc/sakila/en/sakila-installation.html
