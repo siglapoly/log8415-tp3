@@ -93,7 +93,7 @@ def create_security_group():
         'IpProtocol': 'tcp',
         'FromPort': 3306,
         'ToPort': 3306,
-        'IpRanges': [{'CidrIp': '0.0.0.0/0'}]  # Update this to the appropriate CIDR range
+        'IpRanges': [{'CidrIp': '0.0.0.0/0'}]  # Open to all traffic
         }
         ec2.authorize_security_group_ingress(
         GroupId=security_group_id,
@@ -183,11 +183,10 @@ if __name__ == '__main__':
     #    print("Usage: python lunch.py <aws_access_key_id> <aws_secret_access_key> <aws_session_token> <aws_region>")
     #    sys.exit(1)
  
-    aws_access_key_id='ASIAQDC3YUDEUN3Q52UU'
-    aws_secret_access_key='UIPTih4VxGKaA/3Woqxsy1Jy3V7hVRiUqzKGkWHQ'
-    aws_session_token='FwoGZXIvYXdzENj//////////wEaDC1FxNDYpH29nFYWuyLIAYWtJ+NDUp6pQbW1hzcb6CvlU1XsuFam/kywvFCIRM+Bc6wg3pDoLeNLsIVQnOxNmMFTZt0wCTDB4oxmHu859RZBp1oj73yT7S425I6RD6kHTTTi6u7HsW/yzm1EV0wczryjlRLS7nFeO1vD4+IPRCZnVdyIhAuSxJ2eFvEYNPRV4ZgqkyKU1MqtHFzuT8mLv6tPJw/p0K30J2yXRxy/RhO9NSEFBEzDeD7V6CWKiuXdIvSwkCgxn70bymk6pbdM00KfiWh1SA80KMHi9KoGMi0ZIO2umB5cJXbrbc9QrpCYgHWwKn/oNH6/t/+JyaIklV0QEnt2itIhuVkWZGI='
+    aws_access_key_id='ASIAQDC3YUDE5CRBDKCG'
+    aws_secret_access_key='Bvf8mHQVbiDcvHdbK5qg5nZkXSyQbumH+d1Kbhhf'
+    aws_session_token='FwoGZXIvYXdzEAgaDL1gcmGbaeJ3XpLtqCLIAVVublv4T8mAockFZJeYS41lNAt/ecWMGLsmSIxwM5nQqD+RghPQ/MOYWN86C8hik1li8EqdHPR0B5hbTKvJO2F3ggCfeXIqOJhd4UWR6+X/qjNKES8X2jzbBNgYN3ZF1osK8m2OvEpgySxxDihi+WjOOeM/dLVNgql3aNuG8rlr+WrjEnID3e47mdPlZGMIliONl9Exdepj6y2niMqLPCp1ACQGG2cWyFpTgA8oyOdiA3LBhvCbY+1Y3R3CCH6Gp4a13vPT2EO8KPmn/6oGMi22pIPIJJHtGuCdAq9reUTayGybK69LqVB48F1lbiQrqLG+sORa6i+NVmr4uHs='
     aws_region = 'us-east-1'
-
     
     # Create a a boto3 session with credentials 
     aws_console = boto3.session.Session(

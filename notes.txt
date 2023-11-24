@@ -7,3 +7,20 @@ scp -o StrictHostKeyChecking=no -i bot.pem sakila-db.tar.gz ubuntu@ec2-44-192-57
 
 
 https://dev.mysql.com/doc/sakila/en/sakila-installation.html
+
+
+to forward from local sql client to sql server on ec2 : -------------------------------------------------------
+
+https://www.linode.com/docs/guides/create-an-ssh-tunnel-for-mysql-remote-access/
+
+ssh -i bot.pem ubuntu@ec2-3-239-28-16.compute-1.amazonaws.com -L 3307:127.0.0.1:3306 -N
+
+Also I ran (from instance with server, not sure if needed?)
+USE mysql;
+UPDATE user SET plugin='mysql_native_password' WHERE User='root';
+FLUSH PRIVILEGES;
+exit;
+
+mysql --host=127.0.0.1 --port=3307
+
+---------------------------------------------------------------------------------------------------
