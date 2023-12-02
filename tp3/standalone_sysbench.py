@@ -6,18 +6,18 @@ import sys
 import json
 from botocore.exceptions import ClientError
 
-def deploy_standalone_sql():
+def test_standalone_sql():
 
     instance_infos = get_instance_infos()
     print(instance_infos)
     #we keep first instance for the standalone sql
     instance = instance_infos[0]
     instance_id, public_ip = instance
-    start_standalone_sql(instance_id,'bot.pem')
+    benchmark_standalone_sql(instance_id,'bot.pem')
     pass
 
 
-def start_standalone_sql(instance_id, key_file):
+def benchmark_standalone_sql(instance_id, key_file):
     try:
 
         # Get the public IP address of the instance
@@ -25,10 +25,10 @@ def start_standalone_sql(instance_id, key_file):
         public_ip = response['Reservations'][0]['Instances'][0]['PublicIpAddress']
         print(public_ip)
         # Copy the sakila db files to instance
-        copy_command = f'scp -o StrictHostKeyChecking=no -i {key_file} sakila-db.tar.gz ubuntu@{public_ip}:/home/ubuntu/'
-        print(f'Copying sakila database files (.tar.gz) to standalone sql on {instance_id}...')
-        os.system(copy_command)
-        print('copy command executed successfully')
+        #copy_command = f'scp -o StrictHostKeyChecking=no -i {key_file} sakila-db.tar.gz ubuntu@{public_ip}:/home/ubuntu/'
+        #print(f'Copying sakila database files (.tar.gz) to standalone sql on {instance_id}...')
+        #os.system(copy_command)
+        #print('copy command executed successfully')
         # intialize SSH communication with the instance
         ssh_client = paramiko.SSHClient()
         ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -38,30 +38,12 @@ def start_standalone_sql(instance_id, key_file):
         commands = [
             'echo "----------------------- RUNNING COMMANDS ON INSTANCE FOR STANDALONE SQL ----------------------------------"',
 
-            'sudo apt-get update -y',
-            'sudo apt-get install mysql-server -y',
-
-            'echo "----------------------- decompress sakila database files----------------------------------"',
-            'sudo tar -xvzf sakila-db.tar.gz',
-            'sudo sleep 5',
-            #'echo "----------------------- connect to mySQL and run in background, Create and populate database ----------------------------------"',
-            #'nohup sudo mysqld > /home/ubuntu/mysql.log 2>&1 &',
-            #THIS ONE WORKS
-            #'nohup sudo mysqld > /home/ubuntu/mysql.log 2>&1 & nohup sudo mysql -u root -e "source /home/ubuntu/sakila-db/sakila-schema.sql; source /home/ubuntu/sakila-db/sakila-data.sql; use sakila;" > /home/ubuntu/db_setup.log 2>&1 &',
-            
-
-            #TRY THIS ONE FOR ADDING USER
-            "nohup sudo mysqld > /home/ubuntu/mysql.log 2>&1 & nohup sudo mysql -u root -e \"source /home/ubuntu/sakila-db/sakila-schema.sql; source /home/ubuntu/sakila-db/sakila-data.sql; use sakila; CREATE USER 'simon'@'localhost' IDENTIFIED BY 'your_password'; GRANT ALL PRIVILEGES ON *.* TO 'simon'@'localhost' WITH GRANT OPTION; FLUSH PRIVILEGES;\" > /home/ubuntu/db_setup.log 2>&1 &",
-            
-            
-            #'echo "----------------------- connect to mySQL and run in background ----------------------------------"',
-            #'sudo sleep 5',
-            #'echo "----------------------- Create and populate database ----------------------------------"',
-            #'nohup sudo mysql -u root "source /home/ubuntu/sakila-db/sakila-schema.sql; source /home/ubuntu/sakila-db/sakila-data.sql; use sakila;" > /home/ubuntu/db_setup.log 2>&1 &',
-        ]  
+            'sudo apt-get install sysbench -y',
+            'sudo sysbench --db-driver=mysql --mysql-user=simon --mysql-password=nomis --mysql-db=sakila --table_size=10000 /usr/share/sysbench/oltp_read_only.lua prepare',
+            'sudo sysbench --db-driver=mysql --mysql-user=simon --mysql-password=nomis --mysql-db=sakila --table_size=10000 /usr/share/sysbench/oltp_read_only.lua run',
+            ]  
         command = '; '.join(commands)
         stdin, stdout, stderr = ssh_client.exec_command(command)
-
     finally:
         print(stdout.read().decode('utf-8'))
         print(f'-------------- successfuly started the standalone sql server ---------------------------\n')  
@@ -110,5 +92,4 @@ if __name__ == '__main__':
     # Client for ec2 instances
     ec2 = aws_console.client('ec2')
 
-    deploy_standalone_sql()
-
+    test_standalone_sql()

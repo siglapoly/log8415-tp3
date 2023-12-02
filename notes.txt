@@ -9,6 +9,14 @@ scp -o StrictHostKeyChecking=no -i bot.pem sakila-db.tar.gz ubuntu@ec2-44-192-57
 https://dev.mysql.com/doc/sakila/en/sakila-installation.html
 
 
+CREATE USER 'new_user'@'localhost' IDENTIFIED BY 'password';
+
+
+
+
+
+
+
 to forward from local sql client to sql server on ec2 : -------------------------------------------------------
 
 https://www.linode.com/docs/guides/create-an-ssh-tunnel-for-mysql-remote-access/
@@ -24,3 +32,14 @@ exit;
 mysql --host=127.0.0.1 --port=3307
 
 ---------------------------------------------------------------------------------------------------
+
+sysbench (from node) : 
+
+sysbench --db-driver=mysql --mysql-user=simon --mysql-password=nomis --mysql-db=sakila --table_size=10000 /usr/share/sysbench/oltp_read_only.lua prepare
+
+sysbench --db-driver=mysql --mysql-user=simon --mysql-password=nomis --mysql-db=sakila --table_size=10000 /usr/share/sysbench/oltp_read_only.lua run
+
+
+
+
+
