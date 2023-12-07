@@ -74,8 +74,8 @@ def get_instance_infos():
     for reservation in response['Reservations']:
         for instance in reservation['Instances']:
              # Get only instances currently running
-             # The instance in zone us-east-1a is for the orchestrator, so we don't need its information
-            if instance['State']['Name'] == 'running':# and instance['Placement']['AvailabilityZone'] != 'us-east-1a':
+             # The instance in zone us-east-1a is the standalone_sql 
+            if instance['State']['Name'] == 'running' and instance['Placement']['AvailabilityZone'] == 'us-east-1a':
                 instance_id = instance.get('InstanceId')
                 public_ip = instance.get('PublicIpAddress')
                 instance_id_list.append((instance_id,public_ip))

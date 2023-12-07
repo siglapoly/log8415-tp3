@@ -17,7 +17,7 @@ def lunch_ec2():
     
     # lunch instances 5 of type m4.large 
     # The instance in zone us-east-1a is for the orchestrator and the 4 other ones are workers
-    lunched = create_instances('m4.large',keypair_name,[security_group_id], ['us-east-1a'])#,'us-east-1b', 'us-east-1c', 'us-east-1d', 'us-east-1e']) 
+    lunched = create_instances('t2.micro',keypair_name,[security_group_id], ['us-east-1a','us-east-1b', 'us-east-1c', 'us-east-1d', 'us-east-1e']) 
 
 # function that creates and saves an ssh key pair. It also gives read only permission to the file  
 def create_key_pair():
@@ -183,9 +183,9 @@ if __name__ == '__main__':
     #    print("Usage: python lunch.py <aws_access_key_id> <aws_secret_access_key> <aws_session_token> <aws_region>")
     #    sys.exit(1)
  
-    aws_access_key_id='ASIAQDC3YUDEQ4BXXAWH'
-    aws_secret_access_key='X994ECzr2iqSq0+NJqzy3SLQIhhOVYHhf5Klxk48'
-    aws_session_token='FwoGZXIvYXdzENz//////////wEaDIRtVFGMHnjx5UnvjCLIARmSq5wDgk7LzyPJLkyEJyI4+0vgh4EER16/AoLn5a2pbhw9iaBIGT8QCsUHC7dBYXHLaaX7/T6XP8utNVs7JAYVvx2rCRtvWOUsD00zUR3ZtHQY3sbGPXDTOKr07VRqwCxRvtRBMcqW/efnxBbnR7CGXAlmjHaQRnBWag49rDqCHZxJoWFcRWLBP0siGjYltKjkjEo6+Mksb301RLJv902x+NEkqmRjrJ1bZvE/c8Qd5wlDJCaK+o/vqQw49sUALtoYDmkJDvX0KPz6rasGMi1OMdQNbJUyfyq3WdFIKY9Ue+IpSxRqm60epAlyu+3DSHVLaqRYGJfHLhz3U+w='
+    aws_access_key_id = 'ASIAQDC3YUDETBAKDX7L'
+    aws_secret_access_key = 'u9XZzv8LSBKEnGi0+6SqqnVFD5FOyXseSgl2IMnz'
+    aws_session_token = 'FwoGZXIvYXdzEFUaDNetZ+l0F8j8CIl9rCLIAc1v1vPyuGC8EvmkzvbGRCGUbpWImUpY8V8AaM4fyYgFI4QW0CGJiVOmHVwsCJ/p6fPgCI3rO2nsy2dRgWVAoehvAF6BJ/sO/8WzGacZ72KGIzXt74icW4JMx8PxWsZN1Ah3WwY94atlvn7FI6eRZbtl03nTp2P4JPsDsxTHPuOeaL8HkI2RN9AXDB9NVJcCkDoYCl/sRv5Klu6CFPhEAyM2hblQd3vls7NU0UPByXFndVLhXKzYrDtephVgXXFeGTeKMTcZ/KAwKNaxyKsGMi2M6ujxhNZ5NuQWaNpwjPMiFcKoF/delDWOAN/cfxpYgGoq6wlJipGiYfmT9gU='
     aws_region = 'us-east-1'
     
     # Create a a boto3 session with credentials 
