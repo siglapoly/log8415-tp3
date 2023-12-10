@@ -9,8 +9,9 @@ from botocore.exceptions import ClientError
 def create_config_file():
     instance_id_list, cluster_management_ip, cluster_workers_ip = get_instance_infos()
 
-    cluster_management_ip = 'ip-'  + cluster_management_ip[0] + '.ec2.internal'
-    cluster_workers_ip = ['ip-'  + x + '.ec2.internal' for x in cluster_workers_ip]
+    cluster_management_ip = 'ip-'  + cluster_management_ip[0].replace('.','-') + '.ec2.internal' ###WHY WE NEED THE REPLACE ? #prbl not getting good ip from instance
+    
+    cluster_workers_ip = ['ip-'  + x.replace('.','-') + '.ec2.internal' for x in cluster_workers_ip]
     print(cluster_workers_ip)
 
     config_content = f"""[ndb_mgmd]
@@ -34,6 +35,29 @@ datadir=/opt/mysqlcluster/deploy/ndb_data
     # Write the configuration to the file
     with open(config_file_path, 'w') as config_file:
         config_file.write(config_content)
+       
+    # function to give read only permission
+    set_file_permissions('config.ini')
+    set_file_permissions('my.cnf')
+
+
+
+
+def set_file_permissions(file_path):
+
+    # read only permissions on windows 
+    if platform.system() == 'Windows':
+        try:
+            subprocess.run(["icacls", file_path, "/inheritance:r", "/grant:r", f"*S-1-5-32-545:(R)"])
+        except Exception as e:
+            print(f"Failed to set permissions on Windows: {e}")
+    else:
+        try:
+            # Set the file permissions to chmod 400
+            os.chmod(file_path, 0o400)
+        except Exception as e:
+            print(f"Failed to set permissions on Unix-like system: {e}")
+
 
 # Example usage
 # mgmd_hostname = 'domU-12-31-39-04-D6-A3.compute-1.internal'
@@ -69,17 +93,17 @@ if __name__ == '__main__':
     global ec2
     global aws_console
     
-    print("This script install and start a standalone sql server on the first instance \n")          
+    print("This script creates the needed config file (config.ini) based on cluster instances ips\n")          
     
     #print("This script launches overall 4 EC2 workers instances of type M4.Large in Availability Zones : 'us-east-1b', 'us-east-1c', 'us-east-1d', 'us-east-1e' . And 1 EC2 orchestrator intance in Availability Zone us-east-1a  \n")          
     #if len(sys.argv) != 5:
     #    print("Usage: python lunch.py <aws_access_key_id> <aws_secret_access_key> <aws_session_token> <aws_region>")
     #    sys.exit(1)
  
-    aws_access_key_id = 'ASIAQDC3YUDETBAKDX7L'
-    aws_secret_access_key = 'u9XZzv8LSBKEnGi0+6SqqnVFD5FOyXseSgl2IMnz'
-    aws_session_token = 'FwoGZXIvYXdzEFUaDNetZ+l0F8j8CIl9rCLIAc1v1vPyuGC8EvmkzvbGRCGUbpWImUpY8V8AaM4fyYgFI4QW0CGJiVOmHVwsCJ/p6fPgCI3rO2nsy2dRgWVAoehvAF6BJ/sO/8WzGacZ72KGIzXt74icW4JMx8PxWsZN1Ah3WwY94atlvn7FI6eRZbtl03nTp2P4JPsDsxTHPuOeaL8HkI2RN9AXDB9NVJcCkDoYCl/sRv5Klu6CFPhEAyM2hblQd3vls7NU0UPByXFndVLhXKzYrDtephVgXXFeGTeKMTcZ/KAwKNaxyKsGMi2M6ujxhNZ5NuQWaNpwjPMiFcKoF/delDWOAN/cfxpYgGoq6wlJipGiYfmT9gU='
-    aws_region = 'us-east-1'    
+    aws_access_key_id='ASIAQDC3YUDE6GTLHQFC'
+    aws_secret_access_key='eHIrJagxVvdzsC6HHiKm7t5rjzTY871Du4sbo0gB'
+    aws_session_token='FwoGZXIvYXdzEIj//////////wEaDH8UXS/ZMv76Y2CroyLIAVnE3j5vqqyfC7IjvH/2xJAbd1xUfZ1fnJqcU1qxlOuWuSUDKLc7K/Bsn1n7cfHV25erU3/x7AUqnLg6L5FmvxC0P6g2caQz5ypDsosvWTiHmO9NH2Xe8NwbubFkMc0URMgFN9X2zA6PVleuswKZ7A/yZL9nNft0DprLF9CISX6hZWa2P6XCdHRxMTb9ryPNou6FqRpqY0bSHJpD09LZXUbyEWFMpSBpf2VZD/UooSHRPHkCcbRWk+Jj/LQXDhoMoZ24MokjC4rnKNrQ06sGMi12/Ko+wUKrx+P+OiS2w3iTZB435avTXhJjbFic3rWyWzDEg1FnkCfUpk6lK1s='
+    aws_region = 'us-east-1'
 
     # Create a a boto3 session with credentials 
     aws_console = boto3.session.Session(

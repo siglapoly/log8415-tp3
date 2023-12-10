@@ -67,7 +67,7 @@ def create_security_group():
         # Create a security group allowing HTTP (port 80), HTTPS (port 443) and shh (port 22) traffic
         response = ec2.create_security_group(
             Description='This security group is for the bot',
-            GroupName='botSecurityGroup',
+            GroupName='botSecurityGroup-2',
         )
         security_group_id = response['GroupId']
 
@@ -100,6 +100,17 @@ def create_security_group():
         IpPermissions=[mysql_rule]
         )
 
+        mysql_rule = {
+        'IpProtocol': 'tcp',
+        'FromPort': 2200,
+        'ToPort': 2200,
+        'IpRanges': [{'CidrIp': '0.0.0.0/0'}]  # Open to all traffic
+        }
+        ec2.authorize_security_group_ingress(
+        GroupId=security_group_id,
+        IpPermissions=[mysql_rule]
+        )
+
         # Authorize inbound traffic for ssh (port 22)
         ec2.authorize_security_group_ingress(
             GroupId=security_group_id,
@@ -116,6 +127,25 @@ def create_security_group():
                 },
             ],
         )
+
+        # Authorize inbound traffic on port 1186 for cluster mgmt node
+        ec2.authorize_security_group_ingress(
+            GroupId=security_group_id,
+            IpPermissions=[
+                {
+                    'IpProtocol': 'tcp',
+                    'FromPort': 1186,
+                    'ToPort': 1186,
+                    'IpRanges': [
+                        {
+                            'CidrIp': '0.0.0.0/0',  # Open to all traffic 
+                        },
+                    ],
+                },
+            ],
+        )
+
+
         return security_group_id
     except Exception as e:
         if "InvalidGroup.Duplicate" in str(e):
@@ -183,9 +213,9 @@ if __name__ == '__main__':
     #    print("Usage: python lunch.py <aws_access_key_id> <aws_secret_access_key> <aws_session_token> <aws_region>")
     #    sys.exit(1)
  
-    aws_access_key_id = 'ASIAQDC3YUDETBAKDX7L'
-    aws_secret_access_key = 'u9XZzv8LSBKEnGi0+6SqqnVFD5FOyXseSgl2IMnz'
-    aws_session_token = 'FwoGZXIvYXdzEFUaDNetZ+l0F8j8CIl9rCLIAc1v1vPyuGC8EvmkzvbGRCGUbpWImUpY8V8AaM4fyYgFI4QW0CGJiVOmHVwsCJ/p6fPgCI3rO2nsy2dRgWVAoehvAF6BJ/sO/8WzGacZ72KGIzXt74icW4JMx8PxWsZN1Ah3WwY94atlvn7FI6eRZbtl03nTp2P4JPsDsxTHPuOeaL8HkI2RN9AXDB9NVJcCkDoYCl/sRv5Klu6CFPhEAyM2hblQd3vls7NU0UPByXFndVLhXKzYrDtephVgXXFeGTeKMTcZ/KAwKNaxyKsGMi2M6ujxhNZ5NuQWaNpwjPMiFcKoF/delDWOAN/cfxpYgGoq6wlJipGiYfmT9gU='
+    aws_access_key_id='ASIAQDC3YUDE6GTLHQFC'
+    aws_secret_access_key='eHIrJagxVvdzsC6HHiKm7t5rjzTY871Du4sbo0gB'
+    aws_session_token='FwoGZXIvYXdzEIj//////////wEaDH8UXS/ZMv76Y2CroyLIAVnE3j5vqqyfC7IjvH/2xJAbd1xUfZ1fnJqcU1qxlOuWuSUDKLc7K/Bsn1n7cfHV25erU3/x7AUqnLg6L5FmvxC0P6g2caQz5ypDsosvWTiHmO9NH2Xe8NwbubFkMc0URMgFN9X2zA6PVleuswKZ7A/yZL9nNft0DprLF9CISX6hZWa2P6XCdHRxMTb9ryPNou6FqRpqY0bSHJpD09LZXUbyEWFMpSBpf2VZD/UooSHRPHkCcbRWk+Jj/LQXDhoMoZ24MokjC4rnKNrQ06sGMi12/Ko+wUKrx+P+OiS2w3iTZB435avTXhJjbFic3rWyWzDEg1FnkCfUpk6lK1s='
     aws_region = 'us-east-1'
     
     # Create a a boto3 session with credentials 
