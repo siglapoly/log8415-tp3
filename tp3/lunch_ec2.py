@@ -67,7 +67,7 @@ def create_security_group():
         # Create a security group allowing HTTP (port 80), HTTPS (port 443) and shh (port 22) traffic
         response = ec2.create_security_group(
             Description='This security group is for the bot',
-            GroupName='botSecurityGroup-2',
+            GroupName='botSecurityGroup2',
         )
         security_group_id = response['GroupId']
 
@@ -103,7 +103,7 @@ def create_security_group():
         mysql_rule = {
         'IpProtocol': 'tcp',
         'FromPort': 2200,
-        'ToPort': 2200,
+        'ToPort': 2202,
         'IpRanges': [{'CidrIp': '0.0.0.0/0'}]  # Open to all traffic
         }
         ec2.authorize_security_group_ingress(
@@ -213,9 +213,9 @@ if __name__ == '__main__':
     #    print("Usage: python lunch.py <aws_access_key_id> <aws_secret_access_key> <aws_session_token> <aws_region>")
     #    sys.exit(1)
  
-    aws_access_key_id='ASIAQDC3YUDE6GTLHQFC'
-    aws_secret_access_key='eHIrJagxVvdzsC6HHiKm7t5rjzTY871Du4sbo0gB'
-    aws_session_token='FwoGZXIvYXdzEIj//////////wEaDH8UXS/ZMv76Y2CroyLIAVnE3j5vqqyfC7IjvH/2xJAbd1xUfZ1fnJqcU1qxlOuWuSUDKLc7K/Bsn1n7cfHV25erU3/x7AUqnLg6L5FmvxC0P6g2caQz5ypDsosvWTiHmO9NH2Xe8NwbubFkMc0URMgFN9X2zA6PVleuswKZ7A/yZL9nNft0DprLF9CISX6hZWa2P6XCdHRxMTb9ryPNou6FqRpqY0bSHJpD09LZXUbyEWFMpSBpf2VZD/UooSHRPHkCcbRWk+Jj/LQXDhoMoZ24MokjC4rnKNrQ06sGMi12/Ko+wUKrx+P+OiS2w3iTZB435avTXhJjbFic3rWyWzDEg1FnkCfUpk6lK1s='
+    aws_access_key_id='ASIAQDC3YUDEY6WMNM7D'
+    aws_secret_access_key='/7plkDjzFAJZO1Tc5Tuipz3/gl2XXKpXA/6Jy3+o'
+    aws_session_token='FwoGZXIvYXdzENP//////////wEaDLsLPcGdwDeJjFByJiLIAYn5zR8GtRpu5BcxwUPi/Sgu7K+983tncxrsYGkR47b2XRluUU7//QujI2Fd9eXmN2KHtVROPlJkkVJNll4qSzOQECXIclmDT2BsiHxEW6/l/MlP2MG0QoFJ0pF8ZWddl5HMfw5Z+b5AsZ1pmQsPuU94KBIqtPdo9qb4ve88w3gV/p6TccAvzgErf9XdvojKYlX9JId/l98+euRsVKI2YT8pVvrfYUjCt5N9/lMyG3v9Tv0cbUnW1DyrKBhYfkfOyfNr8tx++C1LKJaS5KsGMi1fhPRhrphE6kIQcSajgd3vWtCHKA8+KcXSs5nxIqlHCNd3CjCLuBTtjdj/Oxk='
     aws_region = 'us-east-1'
     
     # Create a a boto3 session with credentials 

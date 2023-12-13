@@ -4,6 +4,7 @@ import botocore
 import platform
 import subprocess
 import sys
+import time 
 import paramiko
 from botocore.exceptions import ClientError
 
@@ -14,20 +15,23 @@ def start_cluster_sql():
     print('RUNNING COMMON STEPS ON ALL NODES!')
     for instance in instance_infos : 
         instance_id, public_ip, private_ip, zone = instance
-        #run_common_steps(instance_id,'bot.pem')
+        run_common_steps(instance_id,'bot.pem')
     print('FINISHED RUNNING COMMON STEPS ON ALL NODES')
 
     #Start mgmt node
     for instance in instance_infos : 
         instance_id, public_ip, private_ip, zone = instance
         if zone == 'us-east-1b': #mgmt node
-            print('STARTING MGMT NODE')
-            #start_mgmt_node(instance_id,'bot.pem')
+            print(f'STARTING MGMT NODE on ip {private_ip}')
+            #run_common_steps(instance_id,'bot.pem')
+            start_mgmt_node(instance_id,'bot.pem')
             print('MGMT NODE STARTED')
             mgmt_ip = 'ip-' + private_ip.replace('.','-') + '.ec2.internal:1186' #get ip of mgmt node to give to data nodes
             print(mgmt_ip)                                      #clean this up so it is a output of start_mgmt func
         else:
             pass
+
+    #time.sleep(5)
     #Start data nodes
     for instance in instance_infos : 
         instance_id, public_ip, private_ip, zone = instance
@@ -37,15 +41,14 @@ def start_cluster_sql():
             print('DATA NODES STARTED')
         else:
             pass
+    time.sleep(10)
     #Back on mgmt node
     for instance in instance_infos : 
         instance_id, public_ip, private_ip, zone = instance
         if zone == 'us-east-1b': #mgmt node
-            print('STARTING MGMT NODE')
-            #start_mgmt_node(instance_id,'bot.pem')
-            print('MGMT NODE STARTED')
-            mgmt_ip = 'ip-' + private_ip.replace('.','-') + '.ec2.internal:1186' #get ip of mgmt node to give to data nodes
-            print(mgmt_ip)                                      #clean this up so it is a output of start_mgmt func
+            print('STARTING mySQL server')
+            start_mysql_server(instance_id,'bot.pem')
+            print('mySQL server STARTED')
         else:
             pass    
 
@@ -64,6 +67,7 @@ def run_common_steps(instance_id, key_file):
         print('connected to instance via ssh')
         # Commands to install Docker Engine in the instance and start the two containers running the ML flask app
         commands = [
+        'sudo apt-get update -y',
         'sudo service mysqld stop',
         'sudo apt-get remove mysql-server mysql mysql-devel',
         'sudo mkdir -p /opt/mysqlcluster/home',
@@ -74,7 +78,7 @@ def run_common_steps(instance_id, key_file):
         "sudo bash -c 'echo \export MYSQLC_HOME=/opt/mysqlcluster/home/mysqlc > /etc/profile.d/mysqlc.sh'",
         "sudo bash -c 'echo \export PATH=$MYSQLC_HOME/bin:$PATH >> /etc/profile.d/mysqlc.sh'",
         'source /etc/profile.d/mysqlc.sh',
-        'sudo apt-get update && sudo apt-get -y install libncurses5 ',
+        'sudo apt-get update && sudo apt-get -y install libncurses5',
         
         ]
         command = '; '.join(commands)
@@ -101,7 +105,6 @@ def start_mgmt_node(instance_id, key_file):
         print('connected to instance via ssh')
         # Commands to install Docker Engine in the instance and start the two containers running the ML flask app
         commands = [
-        'sudo apt-get update && sudo apt-get -y install libncurses5',
         'sudo mkdir -p /opt/mysqlcluster/deploy',
         'cd /opt/mysqlcluster/deploy',
         'sudo mkdir conf',
@@ -131,13 +134,14 @@ def start_mgmt_node(instance_id, key_file):
         # Commands to install Docker Engine in the instance and start the two containers running the ML flask app
         commands = [
             'cd /opt/mysqlcluster/home/mysqlc',
-            'sudo groupadd mysql',
-            'sudo useradd -g mysql mysql',
-            'sudo chown -R mysql:mysql /opt/mysqlcluster/home/mysql-cluster-gpl-7.2.1-linux2.6-x86_64/data/',
-            'sudo chmod -R 777 /opt/mysqlcluster/', #give rights to all folder
-            'scripts/mysql_install_db --no-defaults --datadir=/opt/mysqlcluster/deploy/mysqld_data --general-log',
-            'sudo chmod 600 /opt/mysqlcluster/deploy/conf/config.ini'
-            'sudo /opt/mysqlcluster/home/mysql-cluster-gpl-7.2.1-linux2.6-x86_64/bin/ndb_mgmd -f /opt/mysqlcluster/deploy/conf/config.ini --initial --configdir=/opt/mysqlcluster/deploy/conf',
+            #'sudo groupadd mysql',
+            #'sudo useradd -g mysql mysql',
+            #'sudo chown -R mysql:mysql /opt/mysqlcluster/home/mysql-cluster-gpl-7.2.1-linux2.6-x86_64/data/',
+            #'sudo chmod -R 777 /opt/mysqlcluster/', #give rights to all folder
+            'scripts/mysql_install_db --no-defaults --datadir=/opt/mysqlcluster/deploy/mysqld_data',
+            #'sudo chmod 600 /opt/mysqlcluster/deploy/conf/config.ini',
+            'nohup sudo /opt/mysqlcluster/home/mysqlc/bin/ndb_mgmd -f /opt/mysqlcluster/deploy/conf/config.ini --initial --configdir=/opt/mysqlcluster/deploy/conf> /dev/null 2>&1 &',
+           # 'sudo /opt/mysqlcluster/home/mysqlc/bin/ndb_mgmd -f /opt/mysqlcluster/deploy/conf/config.ini --initial --configdir=/opt/mysqlcluster/deploy/conf',
         ]
         command = '; '.join(commands)
         stdin, stdout, stderr = ssh_client.exec_command(command)
@@ -149,28 +153,24 @@ def start_mgmt_node(instance_id, key_file):
 
 def start_data_node(instance_id, key_file,mgmt_ip):
     try:
-        #print('Running common steps on )
-        # Get the public IP address of the instance
         response = ec2.describe_instances(InstanceIds=[instance_id])
         public_ip = response['Reservations'][0]['Instances'][0]['PublicIpAddress']
-        #print(public_ip)
         
         # intialize SSH communication with the instance
         ssh_client = paramiko.SSHClient()
         ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh_client.connect(public_ip, username='ubuntu', key_filename=key_file)
         print('connected to instance via ssh')
-        # Commands to install Docker Engine in the instance and start the two containers running the ML flask app
-        print(f'XXX {mgmt_ip}')
+        
         commands = [
-            'sudo groupadd mysql',
-            'sudo useradd -g mysql mysql',
-            'sudo chown -R mysql:mysql /opt/mysqlcluster/home/mysql-cluster-gpl-7.2.1-linux2.6-x86_64/data/',
-            'sudo chmod -R 777 /opt/mysqlcluster/', #give rights to all folder
+            #'sudo groupadd mysql',
+            #'sudo useradd -g mysql mysql',
+            #'sudo chmod -R 777 /opt/mysqlcluster/', #give rights to all folder
             'sudo mkdir -p /opt/mysqlcluster/deploy/ndb_data',
-            f'nohup sudo /opt/mysqlcluster/home/mysql-cluster-gpl-7.2.1-linux2.6-x86_64/bin/ndbd -c {mgmt_ip} > /dev/null 2>&1 &'
-
-        ]
+            #'sudo chown -R mysql:mysql /opt/mysqlcluster/deploy/ndb_data/',
+            #'sudo chmod -R 777 /opt/mysqlcluster/deploy/ndb_data/',
+            f'sudo /opt/mysqlcluster/home/mysqlc/bin/ndbd -c {mgmt_ip} > /dev/null 2>&1 &', #HERE IT WORKS IF DONE MANUALLY WITHOUT NOHUP?
+            ]
         command = '; '.join(commands)
         stdin, stdout, stderr = ssh_client.exec_command(command)
         print('IT WORKED')
@@ -178,6 +178,29 @@ def start_data_node(instance_id, key_file,mgmt_ip):
         print(stdout.read().decode('utf-8'))
         ssh_client.close()
 
+def start_mysql_server(instance_id, key_file):
+    try:
+        # Get the public IP address of the instance
+        response = ec2.describe_instances(InstanceIds=[instance_id])
+        public_ip = response['Reservations'][0]['Instances'][0]['PublicIpAddress']
+        
+        # intialize SSH communication with the instance
+        ssh_client = paramiko.SSHClient()
+        ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh_client.connect(public_ip, username='ubuntu', key_filename=key_file)
+        print('connected to instance via ssh')
+        # Commands to install Docker Engine in the instance and start the two containers running the ML flask app
+        commands = [
+            #'sudo chmod 600 /opt/mysqlcluster/deploy/conf/my.cnf', #remore write on my.cnf otherwise wont start
+            'sudo chmod o-w /opt/mysqlcluster/deploy/conf/',
+            'sudo /opt/mysqlcluster/home/mysqlc/bin/mysqld --defaults-file=/opt/mysqlcluster/deploy/conf/my.cnf --user=root &', #start mysqld
+            ]
+        command = '; '.join(commands)
+        stdin, stdout, stderr = ssh_client.exec_command(command)
+        print('IT WORKED')
+    finally:
+        print(stdout.read().decode('utf-8'))
+        ssh_client.close()
 
 def get_instance_infos():    
     instance_id_list = []
@@ -208,11 +231,11 @@ if __name__ == '__main__':
     #    print("Usage: python lunch.py <aws_access_key_id> <aws_secret_access_key> <aws_session_token> <aws_region>")
     #    sys.exit(1)
  
-    aws_access_key_id='ASIAQDC3YUDE6GTLHQFC'
-    aws_secret_access_key='eHIrJagxVvdzsC6HHiKm7t5rjzTY871Du4sbo0gB'
-    aws_session_token='FwoGZXIvYXdzEIj//////////wEaDH8UXS/ZMv76Y2CroyLIAVnE3j5vqqyfC7IjvH/2xJAbd1xUfZ1fnJqcU1qxlOuWuSUDKLc7K/Bsn1n7cfHV25erU3/x7AUqnLg6L5FmvxC0P6g2caQz5ypDsosvWTiHmO9NH2Xe8NwbubFkMc0URMgFN9X2zA6PVleuswKZ7A/yZL9nNft0DprLF9CISX6hZWa2P6XCdHRxMTb9ryPNou6FqRpqY0bSHJpD09LZXUbyEWFMpSBpf2VZD/UooSHRPHkCcbRWk+Jj/LQXDhoMoZ24MokjC4rnKNrQ06sGMi12/Ko+wUKrx+P+OiS2w3iTZB435avTXhJjbFic3rWyWzDEg1FnkCfUpk6lK1s='
+    aws_access_key_id='ASIAQDC3YUDEY6WMNM7D'
+    aws_secret_access_key='/7plkDjzFAJZO1Tc5Tuipz3/gl2XXKpXA/6Jy3+o'
+    aws_session_token='FwoGZXIvYXdzENP//////////wEaDLsLPcGdwDeJjFByJiLIAYn5zR8GtRpu5BcxwUPi/Sgu7K+983tncxrsYGkR47b2XRluUU7//QujI2Fd9eXmN2KHtVROPlJkkVJNll4qSzOQECXIclmDT2BsiHxEW6/l/MlP2MG0QoFJ0pF8ZWddl5HMfw5Z+b5AsZ1pmQsPuU94KBIqtPdo9qb4ve88w3gV/p6TccAvzgErf9XdvojKYlX9JId/l98+euRsVKI2YT8pVvrfYUjCt5N9/lMyG3v9Tv0cbUnW1DyrKBhYfkfOyfNr8tx++C1LKJaS5KsGMi1fhPRhrphE6kIQcSajgd3vWtCHKA8+KcXSs5nxIqlHCNd3CjCLuBTtjdj/Oxk='
     aws_region = 'us-east-1'
-
+    
     # Create a a boto3 session with credentials 
     aws_console = boto3.session.Session(
         aws_access_key_id=aws_access_key_id,
