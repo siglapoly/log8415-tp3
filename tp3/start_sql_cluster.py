@@ -86,7 +86,7 @@ def start_mgmt_node(instance_id, key_file):
         #print(public_ip)
 
         # Copy the config files to mgmt instance
-        copy_command = f'scp -o StrictHostKeyChecking=no -i {key_file} my.cnf config.ini ubuntu@{public_ip}:/home/ubuntu'
+        copy_command = f'scp -o StrictHostKeyChecking=no -i {key_file} my.cnf config.ini sakila-db.tar.gz ubuntu@{public_ip}:/home/ubuntu'
         print(f'Copying config files to mgmt node sql on {instance_id}...')
         os.system(copy_command)
         print('copy command executed successfully')
@@ -161,24 +161,26 @@ def start_mysql_server(instance_id, key_file):
 
             #start 
             'sudo /opt/mysqlcluster/home/mysqlc/bin/mysqld --defaults-file=/opt/mysqlcluster/deploy/conf/my.cnf --user=root > /opt/mysqlcluster/home/mysqlc/bin/logfile.log 2>&1 &', #start mysqld
+            
+            #decompress sakila database files
+            'cd',
+            'sudo tar -xvzf sakila-db.tar.gz',          
+            
             #wait
-            'sleep 10',
+            'sudo sleep 10',
 
             #secure installation
             'cd /opt/mysqlcluster/home/mysqlc/bin',
             'echo -e "\nn\nn\nn\nY\nn\n" | mysql_secure_installation',
             
-            #login in root, create user and give rights
-            'mysql -h 127.0.0.1 -u root',
-
-            #CREATE USER 'simon'@'%' IDENTIFIED BY 'nomis';
-            #GRANT ALL PRIVILEGES ON *.* TO 'simon'@'%' IDENTIFIED BY 'nomis';
-            #FLUSH PRIVILEGES;
-            "mysql -h 127.0.0.1 -u root -e \"CREATE USER 'simon'@'%' IDENTIFIED BY 'nomis'; GRANT ALL PRIVILEGES ON *.* TO 'simon'@'%' IDENTIFIED BY 'nomis'; FLUSH PRIVILEGES;\""
-
-            #to test with user
-            #mysql -h 127.0.0.1 -u simon -pnomis;
+            #install sakila db
+            "mysql -h 127.0.0.1 -u root -e \"source /home/ubuntu/sakila-db/sakila-schema.sql; source /home/ubuntu/sakila-db/sakila-data.sql;\" > /home/ubuntu/db_setup.log 2>&1",
             
+            #login in root, create user (local instance and also from anywhere (%)) and give rights, 
+            "mysql -h 127.0.0.1 -u root -e \"USE sakila; CREATE USER 'simon'@'localhost' IDENTIFIED BY 'nomis'; GRANT ALL PRIVILEGES ON *.* TO 'simon'@'localhost' IDENTIFIED BY 'nomis'; CREATE USER 'simon'@'%' IDENTIFIED BY 'nomis'; GRANT ALL PRIVILEGES ON *.* TO 'simon'@'%' IDENTIFIED BY 'nomis'; FLUSH PRIVILEGES;\" > /home/ubuntu/db_setup.log 2>&1",
+            
+            #to test with user from instance
+            #mysql -h 127.0.0.1 -u simon -pnomis; use sakila; show tables;
             
             ]
         command = '; '.join(commands)
@@ -214,11 +216,11 @@ if __name__ == '__main__':
     #    print("Usage: python lunch.py <aws_access_key_id> <aws_secret_access_key> <aws_session_token> <aws_region>")
     #    sys.exit(1)
  
-    aws_access_key_id='ASIAQDC3YUDEVRA52Z7L'
-    aws_secret_access_key='9DcJmJ/2iC4QzqekqdU2MpqINhp46cqXmhKgJPif'
-    aws_session_token='FwoGZXIvYXdzEAIaDKQIaKCh9SPSDLmSMiLIATXSLTQYMHS6hIiiMtStdv7Vh0QptJCAUmSkaJ4m3pyo0Lcn/J1PmnvsHv13PGYnBtstyCe4Krh0hQG6WO+E12lxl4oDu7BjD0PZVGwpj3ig/fV4Z3TuXzJ+Gb06ffDCbOQgnlCM0kw7kDjmmXDjj/nsPIqlHxC01x+C1iU7GBNE5aTnUiU7x/JsiSIFWvEsGaeFp7kwQV5CzE6wtVPFPmTqDpcyMkckzhd0f0a8WSXabionb7F7zCmryRGwbfd5ZdSTvFy1KIfXKLu/7qsGMi02LM/XX8MF1jYiVANJi12ECUAdBSqo3DsNVzWJvuNOyzMbjMUNzkVRO00SxHI='
+    aws_access_key_id='ASIAQDC3YUDEV6RN2DQ4'
+    aws_secret_access_key='tJcJm+zC3+Rx2/acFmRi0cLxjpiJZu2PMEhnQ3Vl'
+    aws_session_token='FwoGZXIvYXdzECwaDMq9XgD0uv8Oao0qSyLIAankAq11SYRtkVTPBZTqTqq1xLvq7Gn/pDs+6uanLb5bB1TwU5VAzwxvXX/sM6E1hFvB33lVPbk2ftEyX1axe3G/vcIRTizJfzJxHctgPhnWo2ue9txuTDc21B/wTT/6RcX645+yxfA7uf0C1BKLS0BDJzlBgZwBUMMWhcoXTb562zWAW9mLPEFLMNX0rzr/yP0HOsGp8WLVnE9GvjP9PBE+xGvkF/2mnr2Igvp5j0+NF+Xv9uY5/anDzxqOy2RNJBgQqxvVIrFNKMjR96sGMi3YiLmtoNb0YpDc5WigOtf5oOhVwfD9GhsKFz0N6EK31xj6sbbvUCsylnSjyf4='
     aws_region = 'us-east-1'
-  
+    
     
     # Create a a boto3 session with credentials 
     aws_console = boto3.session.Session(

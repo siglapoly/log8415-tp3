@@ -85,12 +85,11 @@ if __name__ == '__main__':
     #    print("Usage: python lunch.py <aws_access_key_id> <aws_secret_access_key> <aws_session_token> <aws_region>")
     #    sys.exit(1)
  
-    aws_access_key_id='ASIAQDC3YUDEVRA52Z7L'
-    aws_secret_access_key='9DcJmJ/2iC4QzqekqdU2MpqINhp46cqXmhKgJPif'
-    aws_session_token='FwoGZXIvYXdzEAIaDKQIaKCh9SPSDLmSMiLIATXSLTQYMHS6hIiiMtStdv7Vh0QptJCAUmSkaJ4m3pyo0Lcn/J1PmnvsHv13PGYnBtstyCe4Krh0hQG6WO+E12lxl4oDu7BjD0PZVGwpj3ig/fV4Z3TuXzJ+Gb06ffDCbOQgnlCM0kw7kDjmmXDjj/nsPIqlHxC01x+C1iU7GBNE5aTnUiU7x/JsiSIFWvEsGaeFp7kwQV5CzE6wtVPFPmTqDpcyMkckzhd0f0a8WSXabionb7F7zCmryRGwbfd5ZdSTvFy1KIfXKLu/7qsGMi02LM/XX8MF1jYiVANJi12ECUAdBSqo3DsNVzWJvuNOyzMbjMUNzkVRO00SxHI='
+    aws_access_key_id='ASIAQDC3YUDEV6RN2DQ4'
+    aws_secret_access_key='tJcJm+zC3+Rx2/acFmRi0cLxjpiJZu2PMEhnQ3Vl'
+    aws_session_token='FwoGZXIvYXdzECwaDMq9XgD0uv8Oao0qSyLIAankAq11SYRtkVTPBZTqTqq1xLvq7Gn/pDs+6uanLb5bB1TwU5VAzwxvXX/sM6E1hFvB33lVPbk2ftEyX1axe3G/vcIRTizJfzJxHctgPhnWo2ue9txuTDc21B/wTT/6RcX645+yxfA7uf0C1BKLS0BDJzlBgZwBUMMWhcoXTb562zWAW9mLPEFLMNX0rzr/yP0HOsGp8WLVnE9GvjP9PBE+xGvkF/2mnr2Igvp5j0+NF+Xv9uY5/anDzxqOy2RNJBgQqxvVIrFNKMjR96sGMi3YiLmtoNb0YpDc5WigOtf5oOhVwfD9GhsKFz0N6EK31xj6sbbvUCsylnSjyf4='
     aws_region = 'us-east-1'
-  
-
+    
     # Create a a boto3 session with credentials 
     aws_console = boto3.session.Session(
         aws_access_key_id=aws_access_key_id,
