@@ -2,7 +2,7 @@ from flask import Flask, request
 
 app = Flask(__name__)
 
-allowed_ip = '172.31.1.115'
+allowed_ip = '172.31.6.237'
 
 @app.route('/', methods=['GET', 'POST'])
 def handle_request():

@@ -154,6 +154,13 @@ def launch_trusted_host(instance_id, key_file, flask_directory, gate_ip):
             'sudo pip install Flask',
             'sudo pip install requests',
             'export flask_application=trusted_host.py',
+
+            'echo "----------------------- kill unused services ------------------------------"',
+            'lsof -i :53 | awk \'NR>1 {{print $2}}\' | xargs sudo kill',
+            'lsof -i :68 | awk \'NR>1 {{print $2}}\' | xargs sudo kill',
+            'lsof -i :323 | awk \'NR>1 {{print $2}}\' | xargs sudo kill',
+
+
             'echo "----------------------- lunching flask app --------------------------------------"',
             'nohup sudo python3 trusted_host.py > /dev/null 2>&1 &',
 

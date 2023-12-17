@@ -3,7 +3,7 @@ import requests
 
 app = Flask(__name__)
 
-th_url = 'http://ip-172-31-17-79.ec2.internal:443'
+th_url = 'http://ip-172-31-94-94.ec2.internal:443'
 
 #HERE WE NEED TO MODIFY SO THAT WE CAN GET LOCAL IP FROM WHERE CODE IS RAN, FEED IT HERE AS A TRUSTED SOURCE
 trusted_ips = ["24.202.63.137"]
