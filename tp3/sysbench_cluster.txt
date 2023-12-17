@@ -1,0 +1,20 @@
+sudo sysbench --db-driver=mysql \
+  --mysql-host=ec2-54-237-247-255.compute-1.amazonaws.com \
+  --mysql-user=simon \
+  --mysql-password=nomis \
+  --mysql-db=sakila \
+  --table_size=10000 \
+  /usr/share/sysbench/oltp_read_only.lua prepare
+
+
+  sudo sysbench --db-driver=mysql \
+  --mysql-host=ec2-54-237-247-255.compute-1.amazonaws.com \ 
+  --mysql-user=simon \
+  --mysql-password=nomis \
+  --mysql-db=sakila \
+  --table_size=10000 \
+  /usr/share/sysbench/oltp_read_only.lua run
+
+
+
+  

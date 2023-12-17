@@ -36,29 +36,35 @@ def start_standalone_sql(instance_id, key_file):
         print('connected to instance via ssh')
         # Commands to install Docker Engine in the instance and start the two containers running the ML flask app
         commands = [
-            'echo "----------------------- RUNNING COMMANDS ON INSTANCE FOR STANDALONE SQL ----------------------------------"',
+        'echo "----------------------- RUNNING COMMANDS ON INSTANCE FOR STANDALONE SQL ----------------------------------"',
+        'sudo service mysql stop',  # Stop MySQL service before making changes
+        'sudo apt-get update -y',
+        'sudo apt-get install mysql-server -y',
 
-            'sudo apt-get update -y',
-            'sudo apt-get install mysql-server -y',
+        'echo "----------------------- decompress sakila database files----------------------------------"',
+        'sudo tar -xvzf sakila-db.tar.gz',
+        # Start MySQL in the background, source Sakila files, create users, and flush privileges
+        #"sudo mysqld > /home/ubuntu/mysql.log 2>&1",
 
-            'echo "----------------------- decompress sakila database files----------------------------------"',
-            'sudo tar -xvzf sakila-db.tar.gz',
-            'sudo sleep 5',
-            #'echo "----------------------- connect to mySQL and run in background, Create and populate database ----------------------------------"',
-            #'nohup sudo mysqld > /home/ubuntu/mysql.log 2>&1 &',
-            #THIS ONE WORKS
-            #'nohup sudo mysqld > /home/ubuntu/mysql.log 2>&1 & nohup sudo mysql -u root -e "source /home/ubuntu/sakila-db/sakila-schema.sql; source /home/ubuntu/sakila-db/sakila-data.sql; use sakila;" > /home/ubuntu/db_setup.log 2>&1 &',
-            
+        'sudo sed -i "s/^bind-address\\s*=\\s*127.0.0.1/bind-address = 0.0.0.0 /" /etc/mysql/mysql.conf.d/mysqld.cnf',
+        #"sudo mysql -u root -e \"source /home/ubuntu/sakila-db/sakila-schema.sql; source /home/ubuntu/sakila-db/sakila-data.sql; use sakila; CREATE USER 'simon'@'localhost' IDENTIFIED BY 'nomis'; GRANT ALL PRIVILEGES ON *.* TO 'simon'@'localhost' WITH GRANT OPTION; CREATE USER 'simon'@'%' IDENTIFIED BY 'nomis'; GRANT ALL PRIVILEGES ON *.* TO 'simon'@'%' WITH GRANT OPTION; FLUSH PRIVILEGES;\" > /home/ubuntu/db_setup.log 2>&1 &",
+        'echo -e "\nn\nn\nn\nY\nn\n" | sudo mysql_secure_installation',
+        #install sakila db
+       # "sudo mysql -u root -e \"source /home/ubuntu/sakila-db/sakila-schema.sql; source /home/ubuntu/sakila-db/sakila-data.sql;\" > /home/ubuntu/db_setup.log 2>&1",
+        
+        #login in root, create user (local instance and also from anywhere (%)) and give rights, 
+        #"sudo mysql -u root -e \"USE sakila; CREATE USER 'simon'@'localhost' IDENTIFIED BY 'nomis'; GRANT ALL PRIVILEGES ON *.* TO 'simon'@'localhost' IDENTIFIED BY 'nomis'; CREATE USER 'simon'@'%' IDENTIFIED BY 'nomis'; GRANT ALL PRIVILEGES ON *.* TO 'simon'@'%' IDENTIFIED BY 'nomis'; FLUSH PRIVILEGES;\" > /home/ubuntu/db_setup.log 2>&1",
+        
 
-            #TRY THIS ONE FOR ADDING USER
-            "nohup sudo mysqld > /home/ubuntu/mysql.log 2>&1 & nohup sudo mysql -u root -e \"source /home/ubuntu/sakila-db/sakila-schema.sql; source /home/ubuntu/sakila-db/sakila-data.sql; use sakila; CREATE USER 'simon'@'localhost' IDENTIFIED BY 'your_password'; GRANT ALL PRIVILEGES ON *.* TO 'simon'@'localhost' WITH GRANT OPTION; FLUSH PRIVILEGES;\" > /home/ubuntu/db_setup.log 2>&1 &",
-            
-            
-            #'echo "----------------------- connect to mySQL and run in background ----------------------------------"',
-            #'sudo sleep 5',
-            #'echo "----------------------- Create and populate database ----------------------------------"',
-            #'nohup sudo mysql -u root "source /home/ubuntu/sakila-db/sakila-schema.sql; source /home/ubuntu/sakila-db/sakila-data.sql; use sakila;" > /home/ubuntu/db_setup.log 2>&1 &',
-        ]  
+
+        #'sudo sleep 5',
+        #'echo -e "\nn\nn\nn\nY\nn\n" | sudo mysql_secure_installation',
+        #'sudo sleep 5',
+        #'sudo sed -i "s/^bind-address\\s*=\\s*127.0.0.1/bind-address = 0.0.0.4/" /etc/mysql/mysql.conf.d/mysqld.cnf',
+   
+    
+        #'sudo service mysql restart',  # Restart MySQL service after making bind address python3 schanges
+            ]
         command = '; '.join(commands)
         stdin, stdout, stderr = ssh_client.exec_command(command)
 
@@ -94,11 +100,11 @@ if __name__ == '__main__':
     #    print("Usage: python lunch.py <aws_access_key_id> <aws_secret_access_key> <aws_session_token> <aws_region>")
     #    sys.exit(1)
  
-    aws_access_key_id='ASIAQDC3YUDEQ4BXXAWH'
-    aws_secret_access_key='X994ECzr2iqSq0+NJqzy3SLQIhhOVYHhf5Klxk48'
-    aws_session_token='FwoGZXIvYXdzENz//////////wEaDIRtVFGMHnjx5UnvjCLIARmSq5wDgk7LzyPJLkyEJyI4+0vgh4EER16/AoLn5a2pbhw9iaBIGT8QCsUHC7dBYXHLaaX7/T6XP8utNVs7JAYVvx2rCRtvWOUsD00zUR3ZtHQY3sbGPXDTOKr07VRqwCxRvtRBMcqW/efnxBbnR7CGXAlmjHaQRnBWag49rDqCHZxJoWFcRWLBP0siGjYltKjkjEo6+Mksb301RLJv902x+NEkqmRjrJ1bZvE/c8Qd5wlDJCaK+o/vqQw49sUALtoYDmkJDvX0KPz6rasGMi1OMdQNbJUyfyq3WdFIKY9Ue+IpSxRqm60epAlyu+3DSHVLaqRYGJfHLhz3U+w='
+    aws_access_key_id='ASIAQDC3YUDEV6RN2DQ4'
+    aws_secret_access_key='tJcJm+zC3+Rx2/acFmRi0cLxjpiJZu2PMEhnQ3Vl'
+    aws_session_token='FwoGZXIvYXdzECwaDMq9XgD0uv8Oao0qSyLIAankAq11SYRtkVTPBZTqTqq1xLvq7Gn/pDs+6uanLb5bB1TwU5VAzwxvXX/sM6E1hFvB33lVPbk2ftEyX1axe3G/vcIRTizJfzJxHctgPhnWo2ue9txuTDc21B/wTT/6RcX645+yxfA7uf0C1BKLS0BDJzlBgZwBUMMWhcoXTb562zWAW9mLPEFLMNX0rzr/yP0HOsGp8WLVnE9GvjP9PBE+xGvkF/2mnr2Igvp5j0+NF+Xv9uY5/anDzxqOy2RNJBgQqxvVIrFNKMjR96sGMi3YiLmtoNb0YpDc5WigOtf5oOhVwfD9GhsKFz0N6EK31xj6sbbvUCsylnSjyf4='
     aws_region = 'us-east-1'
-
+    
 
     # Create a a boto3 session with credentials 
     aws_console = boto3.session.Session(
