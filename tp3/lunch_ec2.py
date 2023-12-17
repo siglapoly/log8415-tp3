@@ -68,7 +68,7 @@ def create_security_group():
         # Create a security group allowing HTTP (port 80), HTTPS (port 443) and shh (port 22) traffic
         response = ec2.create_security_group(
             Description='This security group is for the bot',
-            GroupName='botSecurityGroup9',
+            GroupName='botSecurityGroup2',
         )
         security_group_id = response['GroupId']
 
@@ -214,9 +214,9 @@ if __name__ == '__main__':
     #    print("Usage: python lunch.py <aws_access_key_id> <aws_secret_access_key> <aws_session_token> <aws_region>")
     #    sys.exit(1)
  
-    aws_access_key_id='ASIAQDC3YUDEREADNSFA'
-    aws_secret_access_key='QITLqDDDcNi5ppTkjbndH05wSRdo91JmZzC42bnP'
-    aws_session_token='FwoGZXIvYXdzEDMaDFI3Cm1hGhF0XPSSNyLIAWKpXOh9DMrRAbwpjzqvr1Tu4z9JCjOQZxxeWOjVc2XTU93bh4nzSSBNESv0WySDVlSj/RWWNKltlZRtOA3DNszwB668BAIfhZXdAQq/X3t373/4XnkhAj1Z2S45sjlWJdfJBA5YHon8gD7PEjpKwVmnNZoX5yN/TJ7gu658CaIFtLVdbDh0AkvJQzbX1upW5Er5iXlKijhebcyooZ6CRqhb4jA/HZOrFXJnlHzlGhadA4syhHeFVtUM52GJlfpkK7PO/Sg3GmIvKM2U+asGMi2n2YqcykuCCwQXwgwLP03ak5OQbCEKc1bSzRD7uD/dtrIzTFBHRYMFlul8grI='
+    aws_access_key_id='ASIAQDC3YUDEZIP6I7UJ'
+    aws_secret_access_key='/9EjXdpsaI219ghFFEO7i7SJbedGtNjNrHxXrZxq'
+    aws_session_token='FwoGZXIvYXdzEEEaDB/4msiCvKUkv/r3hiLIASE0UfQd3OsvWmAhmEWJuua5c2XYUW+cM6U+OH4/JtmI/NFS2lD5jg7QT0K2XYLgMCYYNRQIlLjbX/tiT8fsrW9m1jpkHIjfMrYoC5Ok1BJUW3+0U8KpcAUReypju6gkhAQtplJKalxpvxTYmTh5mcGiKTgkj8KiyYiklzVqjtrXd446cHcIwKqw5iPmNLwbqe7fZPmtWM9BAIGvcU1LF/AWPbzBSzVlgR3tcu0FJSgiy0ltGgK1eV5UwogMXL41e4EwvynVIowHKLKy/KsGMi3dhwaQJNFIPrtkvdH4t9LUCMct25KNeU1w/tTC13eDoaslqMAlhQFz6EVbgic='
     aws_region = 'us-east-1'
     
     # Create a a boto3 session with credentials 

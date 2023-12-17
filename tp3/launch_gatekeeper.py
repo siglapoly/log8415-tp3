@@ -26,23 +26,61 @@ def launch_gatekeeper():
     print(f'STARTING gate NODE on ip (public,private) :{public_ip,private_ip}')
     launch_gate(instance_id,'bot.pem',gate_flask_directory,th_ip)
     print(f'gate NODE STARTED on ip (public,private) :{public_ip,private_ip}')
-    #gate_ip = 'ip-' + private_ip.replace('.','-') + '.ec2.internal' #get ip of mgmt node to give to data nodes
+
+    #get gate ip and sg id to safely secure trusted host
     gate_ip = private_ip
-    #create custom security group for trusted host (only accepting request coming from gate)
-    #sg_th_id = create_security_group_for_host(gate_ip)
+    response = ec2.describe_instances(InstanceIds=[instance_id])
+    sg_gate_id = [group['GroupId'] for group in response['Reservations'][0]['Instances'][0]['SecurityGroups']][0]
 
-    #apply security group to trusted host
-    #instance_id, public_ip, private_ip, zone = instance_infos[5] #instance 5 trusted host
-    #ec2.modify_instance_attribute(
-    #    InstanceId=instance_id,
-    #    Groups=[sg_th_id]
-    #)
-
-    #launch trusted host allowing only internal traffic from gate
+    #launch trusted host allowing all traffic for now so we can launch it (original security group)
     instance_id, public_ip, private_ip, zone = instance_infos[1] #instance 5 trusted host
     print(f'STARTING th NODE on ip (public,private) :{public_ip,private_ip}')
     launch_trusted_host(instance_id,'bot.pem',th_flask_directory, gate_ip)
     print(f'th NODE STARTED on ip (public,private) :{public_ip,private_ip}')
+
+    #create custom security group for trusted host (only accepting request coming from gate)
+    sg_th_id = create_security_group_for_host(gate_ip,sg_gate_id)
+    print(f'New security group ID is {sg_th_id} allowing only traffic from gate from ip {gate_ip}')
+    time.sleep(10)
+
+    #apply security group to trusted host
+    #instance_id, public_ip, private_ip, zone = instance_infos[1] #instance 5 trusted host
+    ec2.modify_instance_attribute(
+        InstanceId=instance_id,
+        Groups=[sg_th_id]
+    )
+
+    #then we need to authorize  outbound traffic from security group 1 to security group 2 and inverse
+    #get sg id from initial sg (gate)
+    instance_id, public_ip, private_ip, zone = instance_infos[2] #instance 6 is gate
+    response = ec2.describe_instances(InstanceIds=[instance_id])
+    sg_gate_id = [group['GroupId'] for group in response['Reservations'][0]['Instances'][0]['SecurityGroups']][0]
+
+    #authorize inbound and outbound traffic from one sg to the other
+    print('SG IDS : ')
+    print(sg_gate_id, sg_th_id)
+    authorize_traffic_between_sg(sg_gate_id, sg_th_id)
+    authorize_traffic_between_sg(sg_th_id, sg_gate_id)
+
+def authorize_traffic_between_sg(source_sg_id, destination_sg_id):
+    try:
+        
+        response_outbound = ec2.authorize_security_group_egress(
+            GroupId=source_sg_id,
+            IpPermissions=[
+                {
+                    'IpProtocol': '-1',  # All traffic
+                    'UserIdGroupPairs': [
+                        {
+                            'GroupId': destination_sg_id,
+                        },
+                    ],
+                },
+            ],
+        )
+    except Exception as e:
+        print(e)
+
 
 def launch_gate(instance_id,key_file, flask_directory, th_ip):
     try:
@@ -50,7 +88,7 @@ def launch_gate(instance_id,key_file, flask_directory, th_ip):
         # Get the public IP address of the instance
         response = ec2.describe_instances(InstanceIds=[instance_id]) #could remove this here and add ip as f param
         public_ip = response['Reservations'][0]['Instances'][0]['PublicIpAddress']
-        #print(public_ip)
+        
         
         copy_command = f'scp -o StrictHostKeyChecking=no -i {key_file} -r {flask_directory} ubuntu@{public_ip}:/home/ubuntu/'
         print(f'Copying local Flask app code to {instance_id}...')
@@ -61,7 +99,7 @@ def launch_gate(instance_id,key_file, flask_directory, th_ip):
         ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh_client.connect(public_ip, username='ubuntu', key_filename=key_file)
         print(f'connected to instance {public_ip} via ssh')
-        # Commands to install Docker Engine in the instance and start the two containers running the ML flask app
+        #Commands to install needed packages and run Flask app in background
         commands = ['echo "----------------------- instaling packages ----------------------------------"',
             'sudo apt-get update && sudo apt-get upgrade -y ',
             'sudo apt-get install python3-pip -y',
@@ -74,7 +112,7 @@ def launch_gate(instance_id,key_file, flask_directory, th_ip):
             'sudo pip install requests',
             'export flask_application = gate.py',
             'echo "----------------------- lunching flask app --------------------------------------"',
-            f'nohup sudo python3 gate.py > /dev/null 2>&1 &',
+            'nohup sudo python3 gate.py > /dev/null 2>&1 &',
 
         ]
 
@@ -93,7 +131,7 @@ def launch_trusted_host(instance_id, key_file, flask_directory, gate_ip):
         # Get the public IP address of the instance
         response = ec2.describe_instances(InstanceIds=[instance_id]) #could remove this here and add ip as f param
         public_ip = response['Reservations'][0]['Instances'][0]['PublicIpAddress']
-        #print(public_ip)
+        
         
         copy_command = f'scp -o StrictHostKeyChecking=no -i {key_file} -r {flask_directory} ubuntu@{public_ip}:/home/ubuntu/'
         print(f'Copying local Flask app code to {instance_id}...')
@@ -104,7 +142,7 @@ def launch_trusted_host(instance_id, key_file, flask_directory, gate_ip):
         ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh_client.connect(public_ip, username='ubuntu', key_filename=key_file)
         print(f'connected to instance {public_ip} via ssh')
-        # Commands to install Docker Engine in the instance and start the two containers running the ML flask app
+        #Commands to install needed packages and run Flask app in background
         commands = ['echo "----------------------- instaling packages ----------------------------------"',
             'sudo apt-get update && sudo apt-get upgrade -y ',
             'sudo apt-get install python3-pip -y',
@@ -117,7 +155,7 @@ def launch_trusted_host(instance_id, key_file, flask_directory, gate_ip):
             'sudo pip install requests',
             'export flask_application=trusted_host.py',
             'echo "----------------------- lunching flask app --------------------------------------"',
-            f'nohup sudo python3 trusted_host.py > /dev/null 2>&1 &',
+            'nohup sudo python3 trusted_host.py > /dev/null 2>&1 &',
 
         ]
 
@@ -158,7 +196,7 @@ def forward_request():
 
 if __name__ == '__main__':
     # Listen on port 80 for external traffic
-    app.run(host='0.0.0.0', port=80,debug=True) #ssl_context=('path/to/ssl_certificate.pem', 'path/to/ssl_private_key.pem'))
+    app.run(host='0.0.0.0', port=80,debug=True)
 EOF'''     
     os.system(create_file)
 
@@ -183,13 +221,13 @@ EOF'''
     os.system(create_file)
 
     
-def create_security_group_for_host(gate_ip):
-
+def create_security_group_for_host(gate_ip, sg_gate_id):
     try:
+        '''
         # Create a security group allowing HTTPS (port 443) traffic only from trusted host
         response = ec2.create_security_group(
             Description='This security group is for the bot',
-            GroupName='botSecurityGroup_trustedhost',
+            GroupName='botSecurityGroup_trustedhost5',
         )
         security_group_id = response['GroupId']
 
@@ -199,8 +237,44 @@ def create_security_group_for_host(gate_ip):
             IpProtocol='tcp',
             FromPort=443,
             ToPort=443,
-            CidrIp=f'{gate_ip}/32'  # Open to single IP address (gate)
+            CidrIp=f'{gate_ip}/32',  # Open to single IP address (gate)
+            UserIdGroupPairs=[
+                {
+                    'GroupId': sg_gate_id, #from security group 1
+                },
+            ],
         )
+        '''
+        # Create a security group allowing HTTPS (port 443) traffic only from trusted host
+        response = ec2.create_security_group(
+            Description='This security group is for the trusted host',
+            GroupName='botSecurityGroup_trustedhost5',
+        )
+        security_group_id = response['GroupId']
+
+        # Authorize inbound traffic on port 443 from both CidrIp and sg_gate_id
+        ec2.authorize_security_group_ingress(
+            GroupId=security_group_id,
+            IpPermissions=[
+                {
+                    'IpProtocol': 'tcp',
+                    'FromPort': 443,
+                    'ToPort': 443,
+                    'UserIdGroupPairs': [
+                        {
+                            'GroupId': sg_gate_id,
+                        },
+                    ],
+                    'IpRanges': [
+                        {
+                            'CidrIp': f'{gate_ip}/32',
+                        },
+                    ],
+                },
+            ],
+        )
+
+        return security_group_id
         
     except Exception as e:
         if "InvalidGroup.Duplicate" in str(e):
@@ -208,16 +282,13 @@ def create_security_group_for_host(gate_ip):
             Filters=[
             {
                 'Name': 'group-name',
-                'Values': ['botSecurityGroup_trustedhost']
+                'Values': ['botSecurityGroup_trustedhost3']
                     }
                 ]
             )
             return response['SecurityGroups'][0]['GroupId']
         else:
             print(f"Failed to create security group {e}")
-
-
-
 
 
 def get_instance_infos():    
@@ -245,9 +316,9 @@ if __name__ == '__main__':
     #    print("Usage: python lunch.py <aws_access_key_id> <aws_secret_access_key> <aws_session_token> <aws_region>")
     #    sys.exit(1)
  
-    aws_access_key_id='ASIAQDC3YUDEREADNSFA'
-    aws_secret_access_key='QITLqDDDcNi5ppTkjbndH05wSRdo91JmZzC42bnP'
-    aws_session_token='FwoGZXIvYXdzEDMaDFI3Cm1hGhF0XPSSNyLIAWKpXOh9DMrRAbwpjzqvr1Tu4z9JCjOQZxxeWOjVc2XTU93bh4nzSSBNESv0WySDVlSj/RWWNKltlZRtOA3DNszwB668BAIfhZXdAQq/X3t373/4XnkhAj1Z2S45sjlWJdfJBA5YHon8gD7PEjpKwVmnNZoX5yN/TJ7gu658CaIFtLVdbDh0AkvJQzbX1upW5Er5iXlKijhebcyooZ6CRqhb4jA/HZOrFXJnlHzlGhadA4syhHeFVtUM52GJlfpkK7PO/Sg3GmIvKM2U+asGMi2n2YqcykuCCwQXwgwLP03ak5OQbCEKc1bSzRD7uD/dtrIzTFBHRYMFlul8grI='
+    aws_access_key_id='ASIAQDC3YUDEZIP6I7UJ'
+    aws_secret_access_key='/9EjXdpsaI219ghFFEO7i7SJbedGtNjNrHxXrZxq'
+    aws_session_token='FwoGZXIvYXdzEEEaDB/4msiCvKUkv/r3hiLIASE0UfQd3OsvWmAhmEWJuua5c2XYUW+cM6U+OH4/JtmI/NFS2lD5jg7QT0K2XYLgMCYYNRQIlLjbX/tiT8fsrW9m1jpkHIjfMrYoC5Ok1BJUW3+0U8KpcAUReypju6gkhAQtplJKalxpvxTYmTh5mcGiKTgkj8KiyYiklzVqjtrXd446cHcIwKqw5iPmNLwbqe7fZPmtWM9BAIGvcU1LF/AWPbzBSzVlgR3tcu0FJSgiy0ltGgK1eV5UwogMXL41e4EwvynVIowHKLKy/KsGMi3dhwaQJNFIPrtkvdH4t9LUCMct25KNeU1w/tTC13eDoaslqMAlhQFz6EVbgic='
     aws_region = 'us-east-1'
     
     # Create a a boto3 session with credentials 
