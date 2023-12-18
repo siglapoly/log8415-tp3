@@ -16,6 +16,7 @@ def launch_gatekeeper():
     gate_flask_directory = 'gate_flask_application'#os.path.join(current_directory, 'gate_flask_application')
 
     instance_infos = get_instance_infos()
+    print(f'Instance infos for t2 larges instances : {instance_infos}')
     
     #get trusted host ip to give to gate
     instance_id, public_ip, private_ip, zone = instance_infos[1] #instance 5 trusted host, 6 will be gate (so we can input th ip)
@@ -303,7 +304,7 @@ def get_instance_infos():
     response = ec2.describe_instances()
     for reservation in response['Reservations']:
         for instance in reservation['Instances']:
-            if instance['State']['Name'] == 'running': 
+             if instance['State']['Name'] == 'running' and instance.get('InstanceType') == 't2.large': 
                 instance_id = instance.get('InstanceId')
                 public_ip = instance.get('PublicIpAddress')
                 private_ip = instance.get('PrivateIpAddress')

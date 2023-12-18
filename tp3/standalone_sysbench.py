@@ -16,7 +16,6 @@ def test_standalone_sql():
     benchmark_standalone_sql(instance_id,'bot.pem')
     pass
 
-
 def benchmark_standalone_sql(instance_id, key_file):
     try:
 
@@ -57,7 +56,7 @@ def get_instance_infos():
         for instance in reservation['Instances']:
              # Get only instances currently running
              # The instance in zone us-east-1a is the standalone_sql 
-            if instance['State']['Name'] == 'running' and instance['Placement']['AvailabilityZone'] == 'us-east-1a':
+             if instance['State']['Name'] == 'running' and instance.get('InstanceType') == 't2.micro': 
                 instance_id = instance.get('InstanceId')
                 public_ip = instance.get('PublicIpAddress')
                 instance_id_list.append((instance_id,public_ip))
@@ -76,9 +75,9 @@ if __name__ == '__main__':
     #    print("Usage: python lunch.py <aws_access_key_id> <aws_secret_access_key> <aws_session_token> <aws_region>")
     #    sys.exit(1)
  
-    aws_access_key_id='ASIAQDC3YUDEQ4BXXAWH'
-    aws_secret_access_key='X994ECzr2iqSq0+NJqzy3SLQIhhOVYHhf5Klxk48'
-    aws_session_token='FwoGZXIvYXdzENz//////////wEaDIRtVFGMHnjx5UnvjCLIARmSq5wDgk7LzyPJLkyEJyI4+0vgh4EER16/AoLn5a2pbhw9iaBIGT8QCsUHC7dBYXHLaaX7/T6XP8utNVs7JAYVvx2rCRtvWOUsD00zUR3ZtHQY3sbGPXDTOKr07VRqwCxRvtRBMcqW/efnxBbnR7CGXAlmjHaQRnBWag49rDqCHZxJoWFcRWLBP0siGjYltKjkjEo6+Mksb301RLJv902x+NEkqmRjrJ1bZvE/c8Qd5wlDJCaK+o/vqQw49sUALtoYDmkJDvX0KPz6rasGMi1OMdQNbJUyfyq3WdFIKY9Ue+IpSxRqm60epAlyu+3DSHVLaqRYGJfHLhz3U+w='
+    aws_access_key_id='ASIAQDC3YUDE6DNFAXGH'
+    aws_secret_access_key='vuHbVB0aCelchDy1Mybq5i0REDuY8XJg3GbV1PBS'
+    aws_session_token='FwoGZXIvYXdzEEUaDHHsBNRYXNWf8YXiKCLIAYCPotbwPJwRZgM3eSJgMc9Agd7FVw1wDFXpZawWxgwGOKihnJx0TgfKtdBkhAV2Lvnz+PvaKxDvb110IOR6lOQ3IbchrbcG7VeiCZiALlmzblwhhTBF2EvO9115ePuSJwoEHCG64YWxaUeOQow0b5p+ScaW9ldCn7WahIiovRnD/Vf6nKx3IDJFWo4AgdCr1qQ+Eljv3/9I2f8fxUZbRfo3BQZ7Rbblz2tbqLSG8xH6uAYX+FmCiVrejnOxZjPeC4QdxJ+b6uyHKN2l/asGMi3j+Luq2pX4kf/rAExKpgujJ2HB51s0a6oCWyxt64g9VhgUZonZAZAR4ctF3Gk='
     aws_region = 'us-east-1'
 
 

@@ -10,11 +10,10 @@ def deploy_standalone_sql():
 
     instance_infos = get_instance_infos()
     print(instance_infos)
-    #we keep first instance for the standalone sql
-    instance = instance_infos[0]
+
+    instance = instance_infos[0] #0 is standalone sql
     instance_id, public_ip = instance
     start_standalone_sql(instance_id,'bot.pem')
-    pass
 
 
 def start_standalone_sql(instance_id, key_file):
@@ -46,16 +45,18 @@ def start_standalone_sql(instance_id, key_file):
         # Start MySQL in the background, source Sakila files, create users, and flush privileges
         #"sudo mysqld > /home/ubuntu/mysql.log 2>&1",
 
-        'sudo sed -i "s/^bind-address\\s*=\\s*127.0.0.1/bind-address = 0.0.0.0 /" /etc/mysql/mysql.conf.d/mysqld.cnf',
+        #'sudo sed -i "s/^bind-address\\s*=\\s*127.0.0.1/bind-address = 0.0.0.0 /" /etc/mysql/mysql.conf.d/mysqld.cnf',
+        'sudo sed -i "s/^bind-address\\s*=\\s*0.0.0.0/bind-address = 127.0.0.1 /" /etc/mysql/mysql.conf.d/mysqld.cnf',
+
         #"sudo mysql -u root -e \"source /home/ubuntu/sakila-db/sakila-schema.sql; source /home/ubuntu/sakila-db/sakila-data.sql; use sakila; CREATE USER 'simon'@'localhost' IDENTIFIED BY 'nomis'; GRANT ALL PRIVILEGES ON *.* TO 'simon'@'localhost' WITH GRANT OPTION; CREATE USER 'simon'@'%' IDENTIFIED BY 'nomis'; GRANT ALL PRIVILEGES ON *.* TO 'simon'@'%' WITH GRANT OPTION; FLUSH PRIVILEGES;\" > /home/ubuntu/db_setup.log 2>&1 &",
+        'sudo service mysql start',
         'echo -e "\nn\nn\nn\nY\nn\n" | sudo mysql_secure_installation',
         #install sakila db
-       # "sudo mysql -u root -e \"source /home/ubuntu/sakila-db/sakila-schema.sql; source /home/ubuntu/sakila-db/sakila-data.sql;\" > /home/ubuntu/db_setup.log 2>&1",
+        "sudo mysql -u root -e \"source /home/ubuntu/sakila-db/sakila-schema.sql; source /home/ubuntu/sakila-db/sakila-data.sql;\" > /home/ubuntu/db_setup.log 2>&1",
         
         #login in root, create user (local instance and also from anywhere (%)) and give rights, 
-        #"sudo mysql -u root -e \"USE sakila; CREATE USER 'simon'@'localhost' IDENTIFIED BY 'nomis'; GRANT ALL PRIVILEGES ON *.* TO 'simon'@'localhost' IDENTIFIED BY 'nomis'; CREATE USER 'simon'@'%' IDENTIFIED BY 'nomis'; GRANT ALL PRIVILEGES ON *.* TO 'simon'@'%' IDENTIFIED BY 'nomis'; FLUSH PRIVILEGES;\" > /home/ubuntu/db_setup.log 2>&1",
-        
-
+        "sudo mysql -u root -e \"USE sakila; CREATE USER 'simon'@'localhost' IDENTIFIED BY 'nomis'; GRANT ALL PRIVILEGES ON *.* TO 'simon'@'localhost' IDENTIFIED BY 'nomis'; FLUSH PRIVILEGES;\" > /home/ubuntu/db_setup.log 2>&1",
+        "sudo mysql -u root -e \"USE sakila; CREATE USER 'simon'@'%' IDENTIFIED BY 'nomis'; GRANT ALL PRIVILEGES ON *.* TO 'simon'@'%' IDENTIFIED BY 'nomis'; FLUSH PRIVILEGES;\" > /home/ubuntu/db_setup.log 2>&1",
 
         #'sudo sleep 5',
         #'echo -e "\nn\nn\nn\nY\nn\n" | sudo mysql_secure_installation',
@@ -81,7 +82,7 @@ def get_instance_infos():
         for instance in reservation['Instances']:
              # Get only instances currently running
              # The instance in zone us-east-1a is the standalone_sql 
-            if instance['State']['Name'] == 'running' and instance['Placement']['AvailabilityZone'] == 'us-east-1a':
+             if instance['State']['Name'] == 'running' and instance.get('InstanceType') == 't2.micro':
                 instance_id = instance.get('InstanceId')
                 public_ip = instance.get('PublicIpAddress')
                 instance_id_list.append((instance_id,public_ip))
@@ -100,9 +101,9 @@ if __name__ == '__main__':
     #    print("Usage: python lunch.py <aws_access_key_id> <aws_secret_access_key> <aws_session_token> <aws_region>")
     #    sys.exit(1)
  
-    aws_access_key_id='ASIAQDC3YUDEV6RN2DQ4'
-    aws_secret_access_key='tJcJm+zC3+Rx2/acFmRi0cLxjpiJZu2PMEhnQ3Vl'
-    aws_session_token='FwoGZXIvYXdzECwaDMq9XgD0uv8Oao0qSyLIAankAq11SYRtkVTPBZTqTqq1xLvq7Gn/pDs+6uanLb5bB1TwU5VAzwxvXX/sM6E1hFvB33lVPbk2ftEyX1axe3G/vcIRTizJfzJxHctgPhnWo2ue9txuTDc21B/wTT/6RcX645+yxfA7uf0C1BKLS0BDJzlBgZwBUMMWhcoXTb562zWAW9mLPEFLMNX0rzr/yP0HOsGp8WLVnE9GvjP9PBE+xGvkF/2mnr2Igvp5j0+NF+Xv9uY5/anDzxqOy2RNJBgQqxvVIrFNKMjR96sGMi3YiLmtoNb0YpDc5WigOtf5oOhVwfD9GhsKFz0N6EK31xj6sbbvUCsylnSjyf4='
+    aws_access_key_id='ASIAQDC3YUDE6DNFAXGH'
+    aws_secret_access_key='vuHbVB0aCelchDy1Mybq5i0REDuY8XJg3GbV1PBS'
+    aws_session_token='FwoGZXIvYXdzEEUaDHHsBNRYXNWf8YXiKCLIAYCPotbwPJwRZgM3eSJgMc9Agd7FVw1wDFXpZawWxgwGOKihnJx0TgfKtdBkhAV2Lvnz+PvaKxDvb110IOR6lOQ3IbchrbcG7VeiCZiALlmzblwhhTBF2EvO9115ePuSJwoEHCG64YWxaUeOQow0b5p+ScaW9ldCn7WahIiovRnD/Vf6nKx3IDJFWo4AgdCr1qQ+Eljv3/9I2f8fxUZbRfo3BQZ7Rbblz2tbqLSG8xH6uAYX+FmCiVrejnOxZjPeC4QdxJ+b6uyHKN2l/asGMi3j+Luq2pX4kf/rAExKpgujJ2HB51s0a6oCWyxt64g9VhgUZonZAZAR4ctF3Gk='
     aws_region = 'us-east-1'
     
 

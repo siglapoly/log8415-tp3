@@ -7,23 +7,29 @@ import sys
 import time 
 import paramiko
 from botocore.exceptions import ClientError
+import json
 
 def start_cluster_sql():
+
+    #initialize mgmt node ip and data nodes ips so that we can feed to the proxy app
+    data_nodes_ips = []
+
     instance_infos = get_instance_infos()
 
     #first run common steps across all nodes
     print('RUNNING COMMON STEPS ON ALL NODES!')
     for instance in instance_infos[1:5] : # instances 1,2,3,4 for sql cluster
         instance_id, public_ip, private_ip, zone = instance
-        run_common_steps(instance_id,'bot.pem')
+        #run_common_steps(instance_id,'bot.pem')
     print('FINISHED RUNNING COMMON STEPS ON ALL NODES')
 
     #Start mgmt node
     instance_id, public_ip, private_ip, zone = instance_infos[1] #instance 1 is mgmt node
     print(f'STARTING MGMT NODE on ip (public,private) :{public_ip,private_ip}')
-    start_mgmt_node(instance_id,'bot.pem')
+    #start_mgmt_node(instance_id,'bot.pem')
     print(f'MGMT NODE STARTED on ip (public,private) :{public_ip,private_ip}')
     mgmt_ip = 'ip-' + private_ip.replace('.','-') + '.ec2.internal:1186' #get ip of mgmt node to give to data nodes
+    manag_ip = private_ip
     print(mgmt_ip)                                      #clean this up so it is a output of start_mgmt func
 
     #Start data nodes
@@ -31,8 +37,10 @@ def start_cluster_sql():
         instance_id, public_ip, private_ip, zone = instance
         print(private_ip, zone )
         print('STARTING DATA NODE')
-        start_data_node(instance_id,'bot.pem',mgmt_ip)
+        #start_data_node(instance_id,'bot.pem',mgmt_ip)
         print('DATA NODES STARTED')
+        #save data nodes ips
+        data_nodes_ips.append(private_ip)
 
     time.sleep(10) #wait for data nodes to all connect
     #Back on mgmt node
@@ -40,6 +48,8 @@ def start_cluster_sql():
     print('STARTING mySQL server')
     start_mysql_server(instance_id,'bot.pem')
     print('mySQL server STARTED')
+
+    return manag_ip, data_nodes_ips
 
 def run_common_steps(instance_id, key_file):
     try:
@@ -161,27 +171,31 @@ def start_mysql_server(instance_id, key_file):
 
             #start 
             'sudo /opt/mysqlcluster/home/mysqlc/bin/mysqld --defaults-file=/opt/mysqlcluster/deploy/conf/my.cnf --user=root > /opt/mysqlcluster/home/mysqlc/bin/logfile.log 2>&1 &', #start mysqld
-            
+            'sudo sleep 10',
             #decompress sakila database files
             'cd',
             'sudo tar -xvzf sakila-db.tar.gz',          
             
             #wait
-            'sudo sleep 10',
+            #'sudo sleep 10',
 
             #secure installation
             'cd /opt/mysqlcluster/home/mysqlc/bin',
             'echo -e "\nn\nn\nn\nY\nn\n" | mysql_secure_installation',
             
+            #'echo "----------------------- installing sakila and creating user --------------------------------------"',
             #install sakila db
-            "mysql -h 127.0.0.1 -u root -e \"source /home/ubuntu/sakila-db/sakila-schema.sql; source /home/ubuntu/sakila-db/sakila-data.sql;\" > /home/ubuntu/db_setup.log 2>&1",
-            
+            #"mysql -h 127.0.0.1 -u root -e \"source /home/ubuntu/sakila-db/sakila-schema.sql; source /home/ubuntu/sakila-db/sakila-data.sql;\" > /home/ubuntu/db_setup.log 2>&1",
+            #'mysql -u root -e "source /home/ubuntu/sakila-db/sakila-schema.sql; source /home/ubuntu/sakila-db/sakila-data.sql;" > /home/ubuntu/db_setup.log 2>&1',
+            'mysql -h 127.0.0.1 -u root -e "source /home/ubuntu/sakila-db/sakila-schema.sql;" > /home/ubuntu/db_setup_schema.log 2>&1',
+            'mysql -h 127.0.0.1 -u root -e "source /home/ubuntu/sakila-db/sakila-data.sql;" > /home/ubuntu/db_setup_data.log 2>&1',
+            #'sudo sleep 10',
             #login in root, create user (local instance and also from anywhere (%)) and give rights, 
-            "mysql -h 127.0.0.1 -u root -e \"USE sakila; CREATE USER 'simon'@'localhost' IDENTIFIED BY 'nomis'; GRANT ALL PRIVILEGES ON *.* TO 'simon'@'localhost' IDENTIFIED BY 'nomis'; CREATE USER 'simon'@'%' IDENTIFIED BY 'nomis'; GRANT ALL PRIVILEGES ON *.* TO 'simon'@'%' IDENTIFIED BY 'nomis'; FLUSH PRIVILEGES;\" > /home/ubuntu/db_setup.log 2>&1",
+            #"mysql -h 127.0.0.1 -u root -e \"USE sakila; CREATE USER 'simon'@'localhost' IDENTIFIED BY 'nomis'; GRANT ALL PRIVILEGES ON *.* TO 'simon'@'localhost' IDENTIFIED BY 'nomis'; CREATE USER 'simon'@'%' IDENTIFIED BY 'nomis'; GRANT ALL PRIVILEGES ON *.* TO 'simon'@'%' IDENTIFIED BY 'nomis'; FLUSH PRIVILEGES;\" > /home/ubuntu/db_setup.log 2>&1",
+            #"mysql -u root -e \"USE sakila; CREATE USER 'simon'@'localhost' IDENTIFIED BY 'nomis'; GRANT ALL PRIVILEGES ON *.* TO 'simon'@'localhost' IDENTIFIED BY 'nomis'; CREATE USER 'simon'@'%' IDENTIFIED BY 'nomis'; GRANT ALL PRIVILEGES ON *.* TO 'simon'@'%' IDENTIFIED BY 'nomis'; FLUSH PRIVILEGES;\" > /home/ubuntu/db_setup.log 2>&1",
             
             #to test with user from instance
             #mysql -h 127.0.0.1 -u simon -pnomis; use sakila; show tables;
-            
             ]
         command = '; '.join(commands)
         stdin, stdout, stderr = ssh_client.exec_command(command)
@@ -195,7 +209,7 @@ def get_instance_infos():
     response = ec2.describe_instances()
     for reservation in response['Reservations']:
         for instance in reservation['Instances']:
-            if instance['State']['Name'] == 'running': 
+            if instance['State']['Name'] == 'running' and instance.get('InstanceType') == 't2.micro': 
                 instance_id = instance.get('InstanceId')
                 public_ip = instance.get('PublicIpAddress')
                 private_ip = instance.get('PrivateIpAddress')
@@ -208,7 +222,6 @@ def get_instance_infos():
 if __name__ == '__main__':
     global ec2
     global aws_console
-    
     print("This script install and start the mySQL cluster \n")          
     
     #print("This script launches overall 4 EC2 workers instances of type M4.Large in Availability Zones : 'us-east-1b', 'us-east-1c', 'us-east-1d', 'us-east-1e' . And 1 EC2 orchestrator intance in Availability Zone us-east-1a  \n")          
@@ -216,11 +229,10 @@ if __name__ == '__main__':
     #    print("Usage: python lunch.py <aws_access_key_id> <aws_secret_access_key> <aws_session_token> <aws_region>")
     #    sys.exit(1)
  
-    aws_access_key_id='ASIAQDC3YUDEV6RN2DQ4'
-    aws_secret_access_key='tJcJm+zC3+Rx2/acFmRi0cLxjpiJZu2PMEhnQ3Vl'
-    aws_session_token='FwoGZXIvYXdzECwaDMq9XgD0uv8Oao0qSyLIAankAq11SYRtkVTPBZTqTqq1xLvq7Gn/pDs+6uanLb5bB1TwU5VAzwxvXX/sM6E1hFvB33lVPbk2ftEyX1axe3G/vcIRTizJfzJxHctgPhnWo2ue9txuTDc21B/wTT/6RcX645+yxfA7uf0C1BKLS0BDJzlBgZwBUMMWhcoXTb562zWAW9mLPEFLMNX0rzr/yP0HOsGp8WLVnE9GvjP9PBE+xGvkF/2mnr2Igvp5j0+NF+Xv9uY5/anDzxqOy2RNJBgQqxvVIrFNKMjR96sGMi3YiLmtoNb0YpDc5WigOtf5oOhVwfD9GhsKFz0N6EK31xj6sbbvUCsylnSjyf4='
+    aws_access_key_id='ASIAQDC3YUDE6DNFAXGH'
+    aws_secret_access_key='vuHbVB0aCelchDy1Mybq5i0REDuY8XJg3GbV1PBS'
+    aws_session_token='FwoGZXIvYXdzEEUaDHHsBNRYXNWf8YXiKCLIAYCPotbwPJwRZgM3eSJgMc9Agd7FVw1wDFXpZawWxgwGOKihnJx0TgfKtdBkhAV2Lvnz+PvaKxDvb110IOR6lOQ3IbchrbcG7VeiCZiALlmzblwhhTBF2EvO9115ePuSJwoEHCG64YWxaUeOQow0b5p+ScaW9ldCn7WahIiovRnD/Vf6nKx3IDJFWo4AgdCr1qQ+Eljv3/9I2f8fxUZbRfo3BQZ7Rbblz2tbqLSG8xH6uAYX+FmCiVrejnOxZjPeC4QdxJ+b6uyHKN2l/asGMi3j+Luq2pX4kf/rAExKpgujJ2HB51s0a6oCWyxt64g9VhgUZonZAZAR4ctF3Gk='
     aws_region = 'us-east-1'
-    
     
     # Create a a boto3 session with credentials 
     aws_console = boto3.session.Session(
@@ -232,4 +244,14 @@ if __name__ == '__main__':
     # Client for ec2 instances
     ec2 = aws_console.client('ec2')
 
-    start_cluster_sql()
+    mgmt_ip, data_nodes_ips = start_cluster_sql()
+
+    output_dict = {
+        "mgmt_ip": mgmt_ip,
+        "data_nodes_ips": data_nodes_ips
+    }
+
+    print(output_dict)
+    # Write the dictionary to a JSON file
+    with open('cluster_ips.json', 'w') as json_file:
+        json.dump(output_dict, json_file)

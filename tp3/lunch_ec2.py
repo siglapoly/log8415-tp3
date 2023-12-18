@@ -16,7 +16,7 @@ def lunch_ec2():
 
     # lunch instances 5 of type t2.micro
     # The instance in zone us-east-1a is for the orchestrator and the 4 other ones are workers
-    #lunched = create_instances('t2.micro',keypair_name,[security_group_id],['us-east-1a','us-east-1b', 'us-east-1c', 'us-east-1d', 'us-east-1e']) 
+    lunched = create_instances('t2.micro',keypair_name,[security_group_id],['us-east-1a','us-east-1b', 'us-east-1c', 'us-east-1d', 'us-east-1e']) 
     lunched = create_instances('t2.large',keypair_name,[security_group_id],['us-east-1a','us-east-1b', 'us-east-1c']) #gatekeeper, trusted host, proxy
     time.sleep(60) #to make sure init finished before rest
 
@@ -68,7 +68,7 @@ def create_security_group():
         # Create a security group allowing HTTP (port 80), HTTPS (port 443) and shh (port 22) traffic
         response = ec2.create_security_group(
             Description='This security group is for the bot',
-            GroupName='botSecurityGroup2',
+            GroupName='botSecurityGroup44',
         )
         security_group_id = response['GroupId']
 
@@ -214,9 +214,9 @@ if __name__ == '__main__':
     #    print("Usage: python lunch.py <aws_access_key_id> <aws_secret_access_key> <aws_session_token> <aws_region>")
     #    sys.exit(1)
  
-    aws_access_key_id='ASIAQDC3YUDEZIP6I7UJ'
-    aws_secret_access_key='/9EjXdpsaI219ghFFEO7i7SJbedGtNjNrHxXrZxq'
-    aws_session_token='FwoGZXIvYXdzEEEaDB/4msiCvKUkv/r3hiLIASE0UfQd3OsvWmAhmEWJuua5c2XYUW+cM6U+OH4/JtmI/NFS2lD5jg7QT0K2XYLgMCYYNRQIlLjbX/tiT8fsrW9m1jpkHIjfMrYoC5Ok1BJUW3+0U8KpcAUReypju6gkhAQtplJKalxpvxTYmTh5mcGiKTgkj8KiyYiklzVqjtrXd446cHcIwKqw5iPmNLwbqe7fZPmtWM9BAIGvcU1LF/AWPbzBSzVlgR3tcu0FJSgiy0ltGgK1eV5UwogMXL41e4EwvynVIowHKLKy/KsGMi3dhwaQJNFIPrtkvdH4t9LUCMct25KNeU1w/tTC13eDoaslqMAlhQFz6EVbgic='
+    aws_access_key_id='ASIAQDC3YUDE6DNFAXGH'
+    aws_secret_access_key='vuHbVB0aCelchDy1Mybq5i0REDuY8XJg3GbV1PBS'
+    aws_session_token='FwoGZXIvYXdzEEUaDHHsBNRYXNWf8YXiKCLIAYCPotbwPJwRZgM3eSJgMc9Agd7FVw1wDFXpZawWxgwGOKihnJx0TgfKtdBkhAV2Lvnz+PvaKxDvb110IOR6lOQ3IbchrbcG7VeiCZiALlmzblwhhTBF2EvO9115ePuSJwoEHCG64YWxaUeOQow0b5p+ScaW9ldCn7WahIiovRnD/Vf6nKx3IDJFWo4AgdCr1qQ+Eljv3/9I2f8fxUZbRfo3BQZ7Rbblz2tbqLSG8xH6uAYX+FmCiVrejnOxZjPeC4QdxJ+b6uyHKN2l/asGMi3j+Luq2pX4kf/rAExKpgujJ2HB51s0a6oCWyxt64g9VhgUZonZAZAR4ctF3Gk='
     aws_region = 'us-east-1'
     
     # Create a a boto3 session with credentials 
