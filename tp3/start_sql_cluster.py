@@ -20,16 +20,17 @@ def start_cluster_sql():
     print('RUNNING COMMON STEPS ON ALL NODES!')
     for instance in instance_infos[1:5] : # instances 1,2,3,4 for sql cluster
         instance_id, public_ip, private_ip, zone = instance
-        #run_common_steps(instance_id,'bot.pem')
+        run_common_steps(instance_id,'bot.pem')
     print('FINISHED RUNNING COMMON STEPS ON ALL NODES')
 
     #Start mgmt node
     instance_id, public_ip, private_ip, zone = instance_infos[1] #instance 1 is mgmt node
     print(f'STARTING MGMT NODE on ip (public,private) :{public_ip,private_ip}')
-    #start_mgmt_node(instance_id,'bot.pem')
+    start_mgmt_node(instance_id,'bot.pem')
     print(f'MGMT NODE STARTED on ip (public,private) :{public_ip,private_ip}')
     mgmt_ip = 'ip-' + private_ip.replace('.','-') + '.ec2.internal:1186' #get ip of mgmt node to give to data nodes
     manag_ip = private_ip
+    manag_public_ip = 'ec2-' + public_ip.replace('.','-') + '.compute-1.amazonaws.com'
     print(mgmt_ip)                                      #clean this up so it is a output of start_mgmt func
 
     #Start data nodes
@@ -37,7 +38,7 @@ def start_cluster_sql():
         instance_id, public_ip, private_ip, zone = instance
         print(private_ip, zone )
         print('STARTING DATA NODE')
-        #start_data_node(instance_id,'bot.pem',mgmt_ip)
+        start_data_node(instance_id,'bot.pem',mgmt_ip)
         print('DATA NODES STARTED')
         #save data nodes ips
         data_nodes_ips.append(private_ip)
@@ -49,7 +50,7 @@ def start_cluster_sql():
     start_mysql_server(instance_id,'bot.pem')
     print('mySQL server STARTED')
 
-    return manag_ip, data_nodes_ips
+    return manag_ip, data_nodes_ips, manag_public_ip
 
 def run_common_steps(instance_id, key_file):
     try:
@@ -75,7 +76,6 @@ def run_common_steps(instance_id, key_file):
         'sudo tar xvf mysql-cluster-gpl-7.2.1-linux2.6-x86_64.tar.gz',
         'sudo ln -s mysql-cluster-gpl-7.2.1-linux2.6-x86_64 mysqlc',
         "echo 'export MYSQLC_HOME=/opt/mysqlcluster/home/mysqlc' | sudo tee /etc/profile.d/mysqlc.sh > /dev/null",
-        #"sudo echo 'export PATH=$MYSQLC_HOME/bin:$PATH' | sudo tee -a /etc/profile.d/mysqlc.sh > /dev/null",
         "echo 'export PATH=$MYSQLC_HOME/bin:$PATH' | sudo tee -a /etc/profile.d/mysqlc.sh > /dev/null",
         'source /etc/profile.d/mysqlc.sh',
         'sudo apt-get update && sudo apt-get -y install libncurses5',
@@ -118,7 +118,7 @@ def start_mgmt_node(instance_id, key_file):
         'sudo rm config.ini my.cnf', #remove files from home
         'cd /opt/mysqlcluster/home/mysqlc',
         'sudo scripts/mysql_install_db --no-defaults --datadir=/opt/mysqlcluster/deploy/mysqld_data',
-        'sudo /opt/mysqlcluster/home/mysqlc/bin/ndb_mgmd -f /opt/mysqlcluster/deploy/conf/config.ini --initial --configdir=/opt/mysqlcluster/deploy/conf> /dev/null 2>&1 &',
+        'sudo /opt/mysqlcluster/home/mysqlc/bin/ndb_mgmd -f /opt/mysqlcluster/deploy/conf/config.ini --initial --configdir=/opt/mysqlcluster/deploy/conf > /dev/null 2>&1 &',
         ]
         command = '; '.join(commands)
         stdin, stdout, stderr = ssh_client.exec_command(command)
@@ -174,10 +174,7 @@ def start_mysql_server(instance_id, key_file):
             'sudo sleep 10',
             #decompress sakila database files
             'cd',
-            'sudo tar -xvzf sakila-db.tar.gz',          
-            
-            #wait
-            #'sudo sleep 10',
+            'sudo tar -xvzf sakila-db.tar.gz',         
 
             #secure installation
             'cd /opt/mysqlcluster/home/mysqlc/bin',
@@ -185,17 +182,14 @@ def start_mysql_server(instance_id, key_file):
             
             #'echo "----------------------- installing sakila and creating user --------------------------------------"',
             #install sakila db
-            #"mysql -h 127.0.0.1 -u root -e \"source /home/ubuntu/sakila-db/sakila-schema.sql; source /home/ubuntu/sakila-db/sakila-data.sql;\" > /home/ubuntu/db_setup.log 2>&1",
-            #'mysql -u root -e "source /home/ubuntu/sakila-db/sakila-schema.sql; source /home/ubuntu/sakila-db/sakila-data.sql;" > /home/ubuntu/db_setup.log 2>&1',
-            'mysql -h 127.0.0.1 -u root -e "source /home/ubuntu/sakila-db/sakila-schema.sql;" > /home/ubuntu/db_setup_schema.log 2>&1',
-            'mysql -h 127.0.0.1 -u root -e "source /home/ubuntu/sakila-db/sakila-data.sql;" > /home/ubuntu/db_setup_data.log 2>&1',
-            #'sudo sleep 10',
-            #login in root, create user (local instance and also from anywhere (%)) and give rights, 
-            #"mysql -h 127.0.0.1 -u root -e \"USE sakila; CREATE USER 'simon'@'localhost' IDENTIFIED BY 'nomis'; GRANT ALL PRIVILEGES ON *.* TO 'simon'@'localhost' IDENTIFIED BY 'nomis'; CREATE USER 'simon'@'%' IDENTIFIED BY 'nomis'; GRANT ALL PRIVILEGES ON *.* TO 'simon'@'%' IDENTIFIED BY 'nomis'; FLUSH PRIVILEGES;\" > /home/ubuntu/db_setup.log 2>&1",
-            #"mysql -u root -e \"USE sakila; CREATE USER 'simon'@'localhost' IDENTIFIED BY 'nomis'; GRANT ALL PRIVILEGES ON *.* TO 'simon'@'localhost' IDENTIFIED BY 'nomis'; CREATE USER 'simon'@'%' IDENTIFIED BY 'nomis'; GRANT ALL PRIVILEGES ON *.* TO 'simon'@'%' IDENTIFIED BY 'nomis'; FLUSH PRIVILEGES;\" > /home/ubuntu/db_setup.log 2>&1",
+            'mysql -h 127.0.0.1 -u root -e "source /home/ubuntu/sakila-db/sakila-schema.sql; source /home/ubuntu/sakila-db/sakila-data.sql;" > /home/ubuntu/db_setup_schema.log 2>&1',
             
-            #to test with user from instance
-            #mysql -h 127.0.0.1 -u simon -pnomis; use sakila; show tables;
+            #login in root, create user (local instance and also from anywhere (%)) and give rights, 
+            "mysql -h 127.0.0.1 -u root -e \"USE sakila; CREATE USER 'simon'@'localhost' IDENTIFIED BY 'nomis'; GRANT ALL PRIVILEGES ON *.* TO 'simon'@'localhost' IDENTIFIED BY 'nomis'; CREATE USER 'simon'@'%' IDENTIFIED BY 'nomis'; GRANT ALL PRIVILEGES ON *.* TO 'simon'@'%' IDENTIFIED BY 'nomis'; FLUSH PRIVILEGES;\" > /home/ubuntu/db_setup.log 2>&1",
+            
+            #commands for installing and preparing sysbench
+            'sudo apt-get install sysbench -y',
+            'sudo sysbench --db-driver=mysql --mysql-user=root --mysql-db=sakila --table_size=10000 /usr/share/sysbench/oltp_read_only.lua prepare',
             ]
         command = '; '.join(commands)
         stdin, stdout, stderr = ssh_client.exec_command(command)
@@ -229,11 +223,11 @@ if __name__ == '__main__':
     #    print("Usage: python lunch.py <aws_access_key_id> <aws_secret_access_key> <aws_session_token> <aws_region>")
     #    sys.exit(1)
  
-    aws_access_key_id='ASIAQDC3YUDE6DNFAXGH'
-    aws_secret_access_key='vuHbVB0aCelchDy1Mybq5i0REDuY8XJg3GbV1PBS'
-    aws_session_token='FwoGZXIvYXdzEEUaDHHsBNRYXNWf8YXiKCLIAYCPotbwPJwRZgM3eSJgMc9Agd7FVw1wDFXpZawWxgwGOKihnJx0TgfKtdBkhAV2Lvnz+PvaKxDvb110IOR6lOQ3IbchrbcG7VeiCZiALlmzblwhhTBF2EvO9115ePuSJwoEHCG64YWxaUeOQow0b5p+ScaW9ldCn7WahIiovRnD/Vf6nKx3IDJFWo4AgdCr1qQ+Eljv3/9I2f8fxUZbRfo3BQZ7Rbblz2tbqLSG8xH6uAYX+FmCiVrejnOxZjPeC4QdxJ+b6uyHKN2l/asGMi3j+Luq2pX4kf/rAExKpgujJ2HB51s0a6oCWyxt64g9VhgUZonZAZAR4ctF3Gk='
+    aws_access_key_id='ASIAQDC3YUDERRDKUAQD'
+    aws_secret_access_key='8yx7uYSLkvJeZKk/W87A5nCVh+tQJ0dXAYQo3r/z'
+    aws_session_token='FwoGZXIvYXdzEGIaDKna5Ls9r8jrMs70TCLIAcUZ+h9988BZvddMc+lQWmZCTka2MtXR1t089EyeYzLhqnlnOkfCIRWUwDKWez5k2yA9JSSE9Y6kn/NveUPY7cfF/vjxREWRzHzu/7k+ZuLi1PnfojvxkugrGM3qDrH7AoRudIlvcK7anPA/kDvFsOXw2z+MUBARO6wP97PDDfaXjjpUMXAU3pdomjFZqjzII5hPkBhnPyQ0FVmX71EAkKlyjoe0eW6NVI12Ls312af1nISF4Wka7okx1hDJoAenZhmartbtzTmDKPLBg6wGMi1GUpEnJb/JmKeb594BF7JPUS5JG1FdDaubAtwzkpcGi8pH76nmaO/nsKKoh10='
     aws_region = 'us-east-1'
-    
+
     # Create a a boto3 session with credentials 
     aws_console = boto3.session.Session(
         aws_access_key_id=aws_access_key_id,
@@ -244,11 +238,12 @@ if __name__ == '__main__':
     # Client for ec2 instances
     ec2 = aws_console.client('ec2')
 
-    mgmt_ip, data_nodes_ips = start_cluster_sql()
+    mgmt_ip, data_nodes_ips, manag_public_ip = start_cluster_sql()
 
     output_dict = {
         "mgmt_ip": mgmt_ip,
-        "data_nodes_ips": data_nodes_ips
+        "data_nodes_ips": data_nodes_ips,
+        "mgmt_public_ip": manag_public_ip
     }
 
     print(output_dict)
