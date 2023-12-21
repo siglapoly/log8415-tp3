@@ -9,7 +9,7 @@ import paramiko
 from botocore.exceptions import ClientError
 import json
 
-def launch_proxy(mgmt_ip, data_nodes_ips):
+def launch_proxy():#mgmt_ip, data_nodes_ips):
     try:
         proxy_flask_directory = 'proxy_flask_application'
 
@@ -17,7 +17,7 @@ def launch_proxy(mgmt_ip, data_nodes_ips):
         instance_id, public_ip, private_ip, zone = instance_infos[0] #instance 7 is proxy
 
         #create proxy app file
-        create_proxy_app_file(instance_id, proxy_flask_directory, mgmt_ip, data_nodes_ips)
+        create_proxy_app_file(proxy_flask_directory)#, mgmt_ip, data_nodes_ips)
         
         # Get the public IP address of the instance
         response = ec2.describe_instances(InstanceIds=[instance_id]) #could remove this here and add ip as f param
@@ -57,7 +57,7 @@ def launch_proxy(mgmt_ip, data_nodes_ips):
         ssh_client.close()
     return public_ip, private_ip
 
-def create_proxy_app_file(instance_id, proxy_flask_directory, mgmt_ip, data_nodes_ips) : 
+def create_proxy_app_file(proxy_flask_directory):#, mgmt_ip, data_nodes_ips) : 
     os.makedirs(proxy_flask_directory,exist_ok=True)
     print('CREATING PROXY APP FILE')
     create_file = f'''cat <<EOF > {proxy_flask_directory}/proxy.py
@@ -68,23 +68,8 @@ import random
 app = Flask(__name__)
 
 @app.route('/', methods=['GET', 'POST'])
-def forward_request():
-    if request.method == 'POST':
-        # Forward GET request to mgmt_ip
-        response = requests.get(f'http://{mgmt_ip}', headers=request.headers, data=request.get_data())
-    elif request.method == 'GET':
-        # Forward POST request to a randomly selected data node
-        selected_ip = 'http://' + str(random.choice({data_nodes_ips}))
-        response = requests.post(selected_ip, headers=request.headers, data=request.get_data())
-    else:
-        # Handle other HTTP methods if needed
-        response = None
-
-    if response:
-        # Return the response from the target server to the original requester
-        return response.content, response.status_code, response.headers.items()
-    else:
-        return "Unsupported HTTP method", 400
+def hello_world():
+    return 'Hello, World! FROM PROXY '
 
 if __name__ == '__main__':
     # Listen on port 80 for external traffic
@@ -142,7 +127,7 @@ if __name__ == '__main__':
     )
     # Client for ec2 instances
     ec2 = aws_console.client('ec2')
-
+    '''
     # Access the file path from command-line arguments
     cluster_ips_path = sys.argv[1]
 
@@ -160,8 +145,8 @@ if __name__ == '__main__':
     # Continue with your second script logic...
     print(f"Management IP: {mgmt_ip}")
     print(f"Data Nodes IPs: {data_nodes_ips}")
-
-    proxy_public_ip, proxy_private_ip = launch_proxy(mgmt_ip, data_nodes_ips)
+    ''' 
+    proxy_public_ip, proxy_private_ip = launch_proxy()#:mgmt_ip, data_nodes_ips)
 
     print(f'Proxy ips : {proxy_private_ip, proxy_public_ip}')
 

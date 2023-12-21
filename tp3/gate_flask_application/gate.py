@@ -3,17 +3,14 @@ import requests
 
 app = Flask(__name__)
 
-th_url = 'http://ip-172-31-94-94.ec2.internal:443'
-
-#HERE WE NEED TO MODIFY SO THAT WE CAN GET LOCAL IP FROM WHERE CODE IS RAN, FEED IT HERE AS A TRUSTED SOURCE
-trusted_ips = ["24.202.63.137"]
+th_url = 'http://ip-172-31-91-164.ec2.internal:443'
 
 @app.route('/', methods=['GET', 'POST'])
 def forward_request():
 
     # Forward the incoming request to trusted host only if ip of request is trusted
     client_ip = request.remote_addr
-    if client_ip in trusted_ips:
+    if client_ip in ['24.202.63.137']:
         response = requests.request(request.method, th_url + request.path, headers=request.headers, data=request.get_data())
     
         # Return the response from Flask App 2 to the original requester

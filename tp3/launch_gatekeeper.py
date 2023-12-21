@@ -7,16 +7,16 @@ import sys
 import time 
 import paramiko
 from botocore.exceptions import ClientError
+import json 
 
-def launch_gatekeeper():
+def launch_gatekeeper(proxy_ip, trusted_ips):
 
     current_directory = os.path.dirname(os.path.realpath(__file__))
-
     th_flask_directory = 'th_flask_application'#os.path.join(current_directory, 'th_flask_application')
     gate_flask_directory = 'gate_flask_application'#os.path.join(current_directory, 'gate_flask_application')
 
+    #get instance infos
     instance_infos = get_instance_infos()
-    print(f'Instance infos for t2 larges instances : {instance_infos}')
     
     #get trusted host ip to give to gate
     instance_id, public_ip, private_ip, zone = instance_infos[1] #instance 5 trusted host, 6 will be gate (so we can input th ip)
@@ -25,7 +25,7 @@ def launch_gatekeeper():
     #launch gate
     instance_id, public_ip, private_ip, zone = instance_infos[2] #instance 6 is gate
     print(f'STARTING gate NODE on ip (public,private) :{public_ip,private_ip}')
-    launch_gate(instance_id,'bot.pem',gate_flask_directory,th_ip)
+    launch_gate(instance_id,'bot.pem',gate_flask_directory,th_ip, trusted_ips)
     print(f'gate NODE STARTED on ip (public,private) :{public_ip,private_ip}')
 
     #get gate ip and sg id to safely secure trusted host
@@ -36,12 +36,17 @@ def launch_gatekeeper():
     #launch trusted host allowing all traffic for now so we can launch it (original security group)
     instance_id, public_ip, private_ip, zone = instance_infos[1] #instance 5 trusted host
     print(f'STARTING th NODE on ip (public,private) :{public_ip,private_ip}')
-    launch_trusted_host(instance_id,'bot.pem',th_flask_directory, gate_ip)
+    launch_trusted_host(instance_id,'bot.pem',th_flask_directory, gate_ip, proxy_ip)
     print(f'th NODE STARTED on ip (public,private) :{public_ip,private_ip}')
 
     #create custom security group for trusted host (only accepting request coming from gate)
-    sg_th_id = create_security_group_for_host(gate_ip,sg_gate_id)
-    print(f'New security group ID is {sg_th_id} allowing only traffic from gate from ip {gate_ip}')
+    print(proxy_ip)
+    proxy_ip_num = proxy_ip[3:16].replace('-','.')
+    print(proxy_ip_num)
+    
+    '''
+    sg_th_id = create_security_group_for_host(gate_ip,sg_gate_id, proxy_ip_num)
+    print(f'New security group ID is {sg_th_id} allowing only traffic from gate from ip {gate_ip} and from proxy from ip {proxy_ip_num}')
     time.sleep(10)
 
     #apply security group to trusted host
@@ -51,17 +56,16 @@ def launch_gatekeeper():
         Groups=[sg_th_id]
     )
 
-    #then we need to authorize  outbound traffic from security group 1 to security group 2 and inverse
-    #get sg id from initial sg (gate)
+    #authorize inbound and outbound traffic from one sg to the other
     instance_id, public_ip, private_ip, zone = instance_infos[2] #instance 6 is gate
     response = ec2.describe_instances(InstanceIds=[instance_id])
     sg_gate_id = [group['GroupId'] for group in response['Reservations'][0]['Instances'][0]['SecurityGroups']][0]
 
-    #authorize inbound and outbound traffic from one sg to the other
     print('SG IDS : ')
     print(sg_gate_id, sg_th_id)
     authorize_traffic_between_sg(sg_gate_id, sg_th_id)
     authorize_traffic_between_sg(sg_th_id, sg_gate_id)
+    '''
 
 def authorize_traffic_between_sg(source_sg_id, destination_sg_id):
     try:
@@ -79,17 +83,32 @@ def authorize_traffic_between_sg(source_sg_id, destination_sg_id):
                 },
             ],
         )
+        
+        response_ingress = ec2.authorize_security_group_ingress( ########MAYBE HERE
+            GroupId=source_sg_id,
+            IpPermissions=[
+                {
+                    'IpProtocol': '-1',  # All traffic
+                    'UserIdGroupPairs': [
+                        {
+                            'GroupId': destination_sg_id,
+                        },
+                    ],
+                },
+            ],
+        )
+        
     except Exception as e:
         print(e)
 
 
-def launch_gate(instance_id,key_file, flask_directory, th_ip):
+def launch_gate(instance_id,key_file, flask_directory, th_ip, trusted_ips):
     try:
-        create_gate_app_file(instance_id, flask_directory, th_ip)
+        #create gate app file  
+        create_gate_app_file(flask_directory, th_ip, trusted_ips)
         # Get the public IP address of the instance
         response = ec2.describe_instances(InstanceIds=[instance_id]) #could remove this here and add ip as f param
         public_ip = response['Reservations'][0]['Instances'][0]['PublicIpAddress']
-        
         
         copy_command = f'scp -o StrictHostKeyChecking=no -i {key_file} -r {flask_directory} ubuntu@{public_ip}:/home/ubuntu/'
         print(f'Copying local Flask app code to {instance_id}...')
@@ -125,10 +144,9 @@ def launch_gate(instance_id,key_file, flask_directory, th_ip):
         ssh_client.close()
 
 
-
-def launch_trusted_host(instance_id, key_file, flask_directory, gate_ip):
+def launch_trusted_host(instance_id, key_file, flask_directory, gate_ip, proxy_ip):
     try:
-        create_th_app_file(instance_id, flask_directory, gate_ip)
+        create_th_app_file(flask_directory, proxy_ip)
         # Get the public IP address of the instance
         response = ec2.describe_instances(InstanceIds=[instance_id]) #could remove this here and add ip as f param
         public_ip = response['Reservations'][0]['Instances'][0]['PublicIpAddress']
@@ -161,7 +179,6 @@ def launch_trusted_host(instance_id, key_file, flask_directory, gate_ip):
             'lsof -i :68 | awk \'NR>1 {{print $2}}\' | xargs sudo kill',
             'lsof -i :323 | awk \'NR>1 {{print $2}}\' | xargs sudo kill',
 
-
             'echo "----------------------- lunching flask app --------------------------------------"',
             'nohup sudo python3 trusted_host.py > /dev/null 2>&1 &',
 
@@ -175,7 +192,7 @@ def launch_trusted_host(instance_id, key_file, flask_directory, gate_ip):
         ssh_client.close()
 
 
-def create_gate_app_file(instance_id, flask_app_directory, th_ip) : 
+def create_gate_app_file(flask_app_directory, th_ip, trusted_ips) : 
     os.makedirs(flask_app_directory,exist_ok=True)
     print('CREATING GATE APP FILE')
     create_file = f'''cat <<EOF > {flask_app_directory}/gate.py
@@ -186,15 +203,12 @@ app = Flask(__name__)
 
 th_url = 'http://{th_ip}:443'
 
-#HERE WE NEED TO MODIFY SO THAT WE CAN GET LOCAL IP FROM WHERE CODE IS RAN, FEED IT HERE AS A TRUSTED SOURCE
-trusted_ips = ["24.202.63.137"]
-
 @app.route('/', methods=['GET', 'POST'])
 def forward_request():
 
     # Forward the incoming request to trusted host only if ip of request is trusted
     client_ip = request.remote_addr
-    if client_ip in trusted_ips:
+    if client_ip in {trusted_ips}:
         response = requests.request(request.method, th_url + request.path, headers=request.headers, data=request.get_data())
     
         # Return the response from Flask App 2 to the original requester
@@ -209,27 +223,34 @@ EOF'''
     os.system(create_file)
 
 
-def create_th_app_file(instance_id, flask_app_directory, gate_ip) : 
+def create_th_app_file(flask_app_directory, proxy_ip) : 
     os.makedirs(flask_app_directory,exist_ok=True)
     create_file = f'''cat <<EOF > {flask_app_directory}/trusted_host.py
 from flask import Flask, request
+import requests
 
 app = Flask(__name__)
 
-allowed_ip = '{gate_ip}'
+proxy_url = 'http://{proxy_ip}:443'
 
 @app.route('/', methods=['GET', 'POST'])
-def handle_request():
-    return "Hello from Flask App 2!"
+def forward_request():
+
+    # Forward the incoming request to the proxy
+
+    response = requests.request(request.method, proxy_url + request.path, headers=request.headers, data=request.get_data())
+
+    # Return the response from proxy to the original requester
+    return response.content, response.status_code, response.headers.items()
 
 if __name__ == '__main__':
-    # Listen on 443 port (HTTPS)
-    app.run(host='0.0.0.0', port=443,debug=True)
-EOF'''     
+    # Listen on port 80 for external traffic
+    app.run(host='0.0.0.0', port=80,debug=True)
+EOF'''    
     os.system(create_file)
 
     
-def create_security_group_for_host(gate_ip, sg_gate_id):
+def create_security_group_for_host(gate_ip, sg_gate_id, proxy_ip):
     try:
         '''
         # Create a security group allowing HTTPS (port 443) traffic only from trusted host
@@ -256,7 +277,7 @@ def create_security_group_for_host(gate_ip, sg_gate_id):
         # Create a security group allowing HTTPS (port 443) traffic only from trusted host
         response = ec2.create_security_group(
             Description='This security group is for the trusted host',
-            GroupName='botSecurityGroup_trustedhost5',
+            GroupName='botSecurityGroup_trustedhost00',
         )
         security_group_id = response['GroupId']
 
@@ -281,6 +302,27 @@ def create_security_group_for_host(gate_ip, sg_gate_id):
                 },
             ],
         )
+        ec2.authorize_security_group_ingress(
+                    GroupId=security_group_id,
+                    IpPermissions=[
+                        {
+                            'IpProtocol': 'tcp',
+                            'FromPort': 443,
+                            'ToPort': 443,
+                            'UserIdGroupPairs': [
+                                {
+                                    'GroupId': sg_gate_id,
+                                },
+                            ],
+                            'IpRanges': [
+                                {
+                                    'CidrIp': f'{proxy_ip}/32',
+                                },
+                            ],
+                        },
+                    ],
+                )
+
 
         return security_group_id
         
@@ -324,9 +366,9 @@ if __name__ == '__main__':
     #    print("Usage: python lunch.py <aws_access_key_id> <aws_secret_access_key> <aws_session_token> <aws_region>")
     #    sys.exit(1)
  
-    aws_access_key_id='ASIAQDC3YUDEZIP6I7UJ'
-    aws_secret_access_key='/9EjXdpsaI219ghFFEO7i7SJbedGtNjNrHxXrZxq'
-    aws_session_token='FwoGZXIvYXdzEEEaDB/4msiCvKUkv/r3hiLIASE0UfQd3OsvWmAhmEWJuua5c2XYUW+cM6U+OH4/JtmI/NFS2lD5jg7QT0K2XYLgMCYYNRQIlLjbX/tiT8fsrW9m1jpkHIjfMrYoC5Ok1BJUW3+0U8KpcAUReypju6gkhAQtplJKalxpvxTYmTh5mcGiKTgkj8KiyYiklzVqjtrXd446cHcIwKqw5iPmNLwbqe7fZPmtWM9BAIGvcU1LF/AWPbzBSzVlgR3tcu0FJSgiy0ltGgK1eV5UwogMXL41e4EwvynVIowHKLKy/KsGMi3dhwaQJNFIPrtkvdH4t9LUCMct25KNeU1w/tTC13eDoaslqMAlhQFz6EVbgic='
+    aws_access_key_id='ASIAQDC3YUDEX6Q2PXWQ'
+    aws_secret_access_key='6dUFJuljb+gozJnSTo5c3ngOzVwFQajlJIi5iGU8'
+    aws_session_token='FwoGZXIvYXdzEJH//////////wEaDD5zzUBYh0Zq10mXEiLIAXnPYjCAoxDjS7C0qDjOzTkthaEZdF4X/laVynyvBJmf3EAabE5HmxI9AU0jsfWxh/x7BuzSEcmnG29QG+u9lAqNstdZnG9i55uRvoYwYsQoIEF+PClYfqaJ3TX8tgV19vHNLXhQ2NzPotoqlIuuXwrcgRe7sz/ld0vuv7tmfISa9lvaEbiBC2asv1n8MiGUDbqwa99XeoxNzKpaw9uE4MuDQzI7LwxljECayuVqNParmuX0FzjQFxJBh8vaPZa4FfIixd4gBlxZKN78jawGMi2gMtjbrb3ba9hTSx3qfgCLHR395cCIpC+xT/SqDaTwPIEJn3YYf92mTo4d0qM='
     aws_region = 'us-east-1'
     
     # Create a a boto3 session with credentials 
@@ -336,8 +378,32 @@ if __name__ == '__main__':
         aws_session_token=aws_session_token, 
         region_name=aws_region
     )
-    # Client for ec2 instances
+    
+    #GET PROXY IP ---------------------------------
+    # Access the file path from command-line arguments
+    proxy_ips_path = 'proxy_ips.json'
+
+    # Read the JSON data from the file
+    with open(proxy_ips_path, 'r') as file:
+        output_json = file.read()
+
+    # Parse the JSON string into a Python dictionary
+    output_dict = json.loads(output_json)
+
+    # Access individual elements from the dictionary
+    proxy_ip = output_dict.get("proxy_private_ip")
+    proxy_ip = 'ip-' + proxy_ip.replace('.','-') + '.ec2.internal'
+    print(f'The proxy IP that will receive requests forwarded by gatekeeper is: {proxy_ip}')
+
+    #GET TRUSTED IPS------------------------------
+    trusted_ips_file = 'trusted_ips.txt'
+    with open(trusted_ips_file, 'r') as file:
+    # Read lines from the file and create a list
+        trusted_ips = [line.strip() for line in file.readlines()]
+    print(f'The trusted ips by the gate are : {trusted_ips}')
+
+    #LAUNCH GATEKEEPER ----------------------------
     ec2 = aws_console.client('ec2')
-    launch_gatekeeper()
+    launch_gatekeeper(proxy_ip,trusted_ips)
 
 

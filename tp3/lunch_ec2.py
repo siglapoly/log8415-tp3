@@ -16,7 +16,7 @@ def lunch_ec2():
 
     # lunch instances 5 of type t2.micro
     # The instance in zone us-east-1a is for the orchestrator and the 4 other ones are workers
-    lunched = create_instances('t2.micro',keypair_name,[security_group_id],['us-east-1a','us-east-1b', 'us-east-1c', 'us-east-1d', 'us-east-1e']) 
+    #lunched = create_instances('t2.micro',keypair_name,[security_group_id],['us-east-1a','us-east-1b', 'us-east-1c', 'us-east-1d', 'us-east-1e']) 
     lunched = create_instances('t2.large',keypair_name,[security_group_id],['us-east-1a','us-east-1b', 'us-east-1c']) #gatekeeper, trusted host, proxy
     time.sleep(60) #to make sure init finished before rest
 
@@ -208,15 +208,22 @@ def create_instances(instance_type, keypair_name, security_group_id, availabilit
 if __name__ == '__main__':
     global ec2
     global aws_console
+    '''
+    print(" \n")          
+    
+    if len(sys.argv) != 5:
+        print("Usage: python lunch.py <aws_access_key_id> <aws_secret_access_key> <aws_session_token> <aws_region>")
+        sys.exit(1)
 
-    #print("This script launches overall 4 EC2 workers instances of type M4.Large in Availability Zones : 'us-east-1b', 'us-east-1c', 'us-east-1d', 'us-east-1e' . And 1 EC2 orchestrator intance in Availability Zone us-east-1a  \n")          
-    #if len(sys.argv) != 5:
-    #    print("Usage: python lunch.py <aws_access_key_id> <aws_secret_access_key> <aws_session_token> <aws_region>")
-    #    sys.exit(1)
+    aws_access_key_id = sys.argv[1]
+    aws_secret_access_key = sys.argv[2]
+    aws_session_token = sys.argv[3]
+    aws_region = sys.argv[4]
+    '''
  
-    aws_access_key_id='ASIAQDC3YUDERRDKUAQD'
-    aws_secret_access_key='8yx7uYSLkvJeZKk/W87A5nCVh+tQJ0dXAYQo3r/z'
-    aws_session_token='FwoGZXIvYXdzEGIaDKna5Ls9r8jrMs70TCLIAcUZ+h9988BZvddMc+lQWmZCTka2MtXR1t089EyeYzLhqnlnOkfCIRWUwDKWez5k2yA9JSSE9Y6kn/NveUPY7cfF/vjxREWRzHzu/7k+ZuLi1PnfojvxkugrGM3qDrH7AoRudIlvcK7anPA/kDvFsOXw2z+MUBARO6wP97PDDfaXjjpUMXAU3pdomjFZqjzII5hPkBhnPyQ0FVmX71EAkKlyjoe0eW6NVI12Ls312af1nISF4Wka7okx1hDJoAenZhmartbtzTmDKPLBg6wGMi1GUpEnJb/JmKeb594BF7JPUS5JG1FdDaubAtwzkpcGi8pH76nmaO/nsKKoh10='
+    aws_access_key_id='ASIAQDC3YUDEX6Q2PXWQ'
+    aws_secret_access_key='6dUFJuljb+gozJnSTo5c3ngOzVwFQajlJIi5iGU8'
+    aws_session_token='FwoGZXIvYXdzEJH//////////wEaDD5zzUBYh0Zq10mXEiLIAXnPYjCAoxDjS7C0qDjOzTkthaEZdF4X/laVynyvBJmf3EAabE5HmxI9AU0jsfWxh/x7BuzSEcmnG29QG+u9lAqNstdZnG9i55uRvoYwYsQoIEF+PClYfqaJ3TX8tgV19vHNLXhQ2NzPotoqlIuuXwrcgRe7sz/ld0vuv7tmfISa9lvaEbiBC2asv1n8MiGUDbqwa99XeoxNzKpaw9uE4MuDQzI7LwxljECayuVqNParmuX0FzjQFxJBh8vaPZa4FfIixd4gBlxZKN78jawGMi2gMtjbrb3ba9hTSx3qfgCLHR395cCIpC+xT/SqDaTwPIEJn3YYf92mTo4d0qM='
     aws_region = 'us-east-1'
     
     # Create a a boto3 session with credentials 
