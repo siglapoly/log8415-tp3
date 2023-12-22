@@ -80,15 +80,14 @@ if __name__ == '__main__':
     
     print("This script creates the needed config file (config.ini) based on cluster instances ips\n")          
     
-    #print("This script creates the config.ini file based on ips
-    #if len(sys.argv) != 5:
-    #    print("Usage: python lunch.py <aws_access_key_id> <aws_secret_access_key> <aws_session_token> <aws_region>")
-    #    sys.exit(1)
- 
-    aws_access_key_id='ASIAQDC3YUDERRDKUAQD'
-    aws_secret_access_key='8yx7uYSLkvJeZKk/W87A5nCVh+tQJ0dXAYQo3r/z'
-    aws_session_token='FwoGZXIvYXdzEGIaDKna5Ls9r8jrMs70TCLIAcUZ+h9988BZvddMc+lQWmZCTka2MtXR1t089EyeYzLhqnlnOkfCIRWUwDKWez5k2yA9JSSE9Y6kn/NveUPY7cfF/vjxREWRzHzu/7k+ZuLi1PnfojvxkugrGM3qDrH7AoRudIlvcK7anPA/kDvFsOXw2z+MUBARO6wP97PDDfaXjjpUMXAU3pdomjFZqjzII5hPkBhnPyQ0FVmX71EAkKlyjoe0eW6NVI12Ls312af1nISF4Wka7okx1hDJoAenZhmartbtzTmDKPLBg6wGMi1GUpEnJb/JmKeb594BF7JPUS5JG1FdDaubAtwzkpcGi8pH76nmaO/nsKKoh10='
-    aws_region = 'us-east-1'
+    if len(sys.argv) != 5:
+        print("Usage: python lunch.py <aws_access_key_id> <aws_secret_access_key> <aws_session_token> <aws_region>")
+        sys.exit(1)
+
+    aws_access_key_id = sys.argv[1]
+    aws_secret_access_key = sys.argv[2]
+    aws_session_token = sys.argv[3]
+    aws_region = sys.argv[4]
     
     # Create a a boto3 session with credentials 
     aws_console = boto3.session.Session(

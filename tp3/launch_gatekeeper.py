@@ -11,9 +11,11 @@ import json
 
 def launch_gatekeeper(proxy_ip, trusted_ips):
 
-    current_directory = os.path.dirname(os.path.realpath(__file__))
-    th_flask_directory = 'th_flask_application'#os.path.join(current_directory, 'th_flask_application')
-    gate_flask_directory = 'gate_flask_application'#os.path.join(current_directory, 'gate_flask_application')
+    #get numeric version of proxy ip to use for trusted security group for trusted host
+    proxy_ip_num = proxy_ip[3:15].replace('-','.')
+
+    th_flask_directory = 'th_flask_application'
+    gate_flask_directory = 'gate_flask_application'
 
     #get instance infos
     instance_infos = get_instance_infos()
@@ -36,36 +38,30 @@ def launch_gatekeeper(proxy_ip, trusted_ips):
     #launch trusted host allowing all traffic for now so we can launch it (original security group)
     instance_id, public_ip, private_ip, zone = instance_infos[1] #instance 5 trusted host
     print(f'STARTING th NODE on ip (public,private) :{public_ip,private_ip}')
-    launch_trusted_host(instance_id,'bot.pem',th_flask_directory, gate_ip, proxy_ip)
+    launch_trusted_host(instance_id,'bot.pem',th_flask_directory, proxy_ip)
     print(f'th NODE STARTED on ip (public,private) :{public_ip,private_ip}')
 
-    #create custom security group for trusted host (only accepting request coming from gate)
-    print(proxy_ip)
-    proxy_ip_num = proxy_ip[3:16].replace('-','.')
-    print(proxy_ip_num)
+    #create custom security group for trusted host (only accepting request coming from gate)    
+    print(f'Proxy ip : {proxy_ip}')
+    print(f'Th ip : {th_ip}')
+    print(f'Gate ip : {gate_ip}')
+    print(f'Proxy ip num: {proxy_ip_num}')
     
-    '''
     sg_th_id = create_security_group_for_host(gate_ip,sg_gate_id, proxy_ip_num)
-    print(f'New security group ID is {sg_th_id} allowing only traffic from gate from ip {gate_ip} and from proxy from ip {proxy_ip_num}')
+    print(f'New security group ID is {sg_th_id} allowing only traffic from gate from ip {gate_ip} and from proxy from ip {proxy_ip}')
     time.sleep(10)
 
     #apply security group to trusted host
-    #instance_id, public_ip, private_ip, zone = instance_infos[1] #instance 5 trusted host
     ec2.modify_instance_attribute(
         InstanceId=instance_id,
         Groups=[sg_th_id]
     )
 
-    #authorize inbound and outbound traffic from one sg to the other
-    instance_id, public_ip, private_ip, zone = instance_infos[2] #instance 6 is gate
-    response = ec2.describe_instances(InstanceIds=[instance_id])
-    sg_gate_id = [group['GroupId'] for group in response['Reservations'][0]['Instances'][0]['SecurityGroups']][0]
-
-    print('SG IDS : ')
-    print(sg_gate_id, sg_th_id)
     authorize_traffic_between_sg(sg_gate_id, sg_th_id)
     authorize_traffic_between_sg(sg_th_id, sg_gate_id)
-    '''
+    
+
+    
 
 def authorize_traffic_between_sg(source_sg_id, destination_sg_id):
     try:
@@ -84,19 +80,6 @@ def authorize_traffic_between_sg(source_sg_id, destination_sg_id):
             ],
         )
         
-        response_ingress = ec2.authorize_security_group_ingress( ########MAYBE HERE
-            GroupId=source_sg_id,
-            IpPermissions=[
-                {
-                    'IpProtocol': '-1',  # All traffic
-                    'UserIdGroupPairs': [
-                        {
-                            'GroupId': destination_sg_id,
-                        },
-                    ],
-                },
-            ],
-        )
         
     except Exception as e:
         print(e)
@@ -144,7 +127,7 @@ def launch_gate(instance_id,key_file, flask_directory, th_ip, trusted_ips):
         ssh_client.close()
 
 
-def launch_trusted_host(instance_id, key_file, flask_directory, gate_ip, proxy_ip):
+def launch_trusted_host(instance_id, key_file, flask_directory, proxy_ip):
     try:
         create_th_app_file(flask_directory, proxy_ip)
         # Get the public IP address of the instance
@@ -217,8 +200,8 @@ def forward_request():
         return "Unauthorized", 401
 
 if __name__ == '__main__':
-    # Listen on port 80 for external traffic
-    app.run(host='0.0.0.0', port=80,debug=True)
+    # Listen on port 443 for external traffic
+    app.run(host='0.0.0.0', port=443,debug=True)
 EOF'''     
     os.system(create_file)
 
@@ -244,40 +227,18 @@ def forward_request():
     return response.content, response.status_code, response.headers.items()
 
 if __name__ == '__main__':
-    # Listen on port 80 for external traffic
-    app.run(host='0.0.0.0', port=80,debug=True)
+    # Listen on port 443 for external traffic
+    app.run(host='0.0.0.0', port=443,debug=True)
 EOF'''    
     os.system(create_file)
 
     
 def create_security_group_for_host(gate_ip, sg_gate_id, proxy_ip):
     try:
-        '''
-        # Create a security group allowing HTTPS (port 443) traffic only from trusted host
-        response = ec2.create_security_group(
-            Description='This security group is for the bot',
-            GroupName='botSecurityGroup_trustedhost5',
-        )
-        security_group_id = response['GroupId']
-
-        # Authorize inbound traffic for HTTP (port 80) 
-        ec2.authorize_security_group_ingress(
-            GroupId=security_group_id,
-            IpProtocol='tcp',
-            FromPort=443,
-            ToPort=443,
-            CidrIp=f'{gate_ip}/32',  # Open to single IP address (gate)
-            UserIdGroupPairs=[
-                {
-                    'GroupId': sg_gate_id, #from security group 1
-                },
-            ],
-        )
-        '''
         # Create a security group allowing HTTPS (port 443) traffic only from trusted host
         response = ec2.create_security_group(
             Description='This security group is for the trusted host',
-            GroupName='botSecurityGroup_trustedhost00',
+            GroupName='botSecurityGroup_trustedhost01',
         )
         security_group_id = response['GroupId']
 
@@ -297,33 +258,12 @@ def create_security_group_for_host(gate_ip, sg_gate_id, proxy_ip):
                     'IpRanges': [
                         {
                             'CidrIp': f'{gate_ip}/32',
+                            'CidrIp': f'{proxy_ip}/32'
                         },
                     ],
                 },
             ],
         )
-        ec2.authorize_security_group_ingress(
-                    GroupId=security_group_id,
-                    IpPermissions=[
-                        {
-                            'IpProtocol': 'tcp',
-                            'FromPort': 443,
-                            'ToPort': 443,
-                            'UserIdGroupPairs': [
-                                {
-                                    'GroupId': sg_gate_id,
-                                },
-                            ],
-                            'IpRanges': [
-                                {
-                                    'CidrIp': f'{proxy_ip}/32',
-                                },
-                            ],
-                        },
-                    ],
-                )
-
-
         return security_group_id
         
     except Exception as e:
@@ -361,15 +301,15 @@ if __name__ == '__main__':
     global ec2
     global aws_console
 
-    #print("This script launches overall 4 EC2 workers instances of type M4.Large in Availability Zones : 'us-east-1b', 'us-east-1c', 'us-east-1d', 'us-east-1e' . And 1 EC2 orchestrator intance in Availability Zone us-east-1a  \n")          
-    #if len(sys.argv) != 5:
-    #    print("Usage: python lunch.py <aws_access_key_id> <aws_secret_access_key> <aws_session_token> <aws_region>")
-    #    sys.exit(1)
- 
-    aws_access_key_id='ASIAQDC3YUDEX6Q2PXWQ'
-    aws_secret_access_key='6dUFJuljb+gozJnSTo5c3ngOzVwFQajlJIi5iGU8'
-    aws_session_token='FwoGZXIvYXdzEJH//////////wEaDD5zzUBYh0Zq10mXEiLIAXnPYjCAoxDjS7C0qDjOzTkthaEZdF4X/laVynyvBJmf3EAabE5HmxI9AU0jsfWxh/x7BuzSEcmnG29QG+u9lAqNstdZnG9i55uRvoYwYsQoIEF+PClYfqaJ3TX8tgV19vHNLXhQ2NzPotoqlIuuXwrcgRe7sz/ld0vuv7tmfISa9lvaEbiBC2asv1n8MiGUDbqwa99XeoxNzKpaw9uE4MuDQzI7LwxljECayuVqNParmuX0FzjQFxJBh8vaPZa4FfIixd4gBlxZKN78jawGMi2gMtjbrb3ba9hTSx3qfgCLHR395cCIpC+xT/SqDaTwPIEJn3YYf92mTo4d0qM='
-    aws_region = 'us-east-1'
+    if len(sys.argv) != 5:
+        print("Usage: python lunch.py <aws_access_key_id> <aws_secret_access_key> <aws_session_token> <aws_region>")
+        sys.exit(1)
+
+    aws_access_key_id = sys.argv[1]
+    aws_secret_access_key = sys.argv[2]
+    aws_session_token = sys.argv[3]
+    aws_region = sys.argv[4]
+    
     
     # Create a a boto3 session with credentials 
     aws_console = boto3.session.Session(

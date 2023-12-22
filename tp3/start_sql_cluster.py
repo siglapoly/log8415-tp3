@@ -218,16 +218,14 @@ if __name__ == '__main__':
     global aws_console
     print("This script install and start the mySQL cluster \n")          
     
-    #print("This script launches overall 4 EC2 workers instances of type M4.Large in Availability Zones : 'us-east-1b', 'us-east-1c', 'us-east-1d', 'us-east-1e' . And 1 EC2 orchestrator intance in Availability Zone us-east-1a  \n")          
-    #if len(sys.argv) != 5:
-    #    print("Usage: python lunch.py <aws_access_key_id> <aws_secret_access_key> <aws_session_token> <aws_region>")
-    #    sys.exit(1)
- 
-    aws_access_key_id='ASIAQDC3YUDEX6Q2PXWQ'
-    aws_secret_access_key='6dUFJuljb+gozJnSTo5c3ngOzVwFQajlJIi5iGU8'
-    aws_session_token='FwoGZXIvYXdzEJH//////////wEaDD5zzUBYh0Zq10mXEiLIAXnPYjCAoxDjS7C0qDjOzTkthaEZdF4X/laVynyvBJmf3EAabE5HmxI9AU0jsfWxh/x7BuzSEcmnG29QG+u9lAqNstdZnG9i55uRvoYwYsQoIEF+PClYfqaJ3TX8tgV19vHNLXhQ2NzPotoqlIuuXwrcgRe7sz/ld0vuv7tmfISa9lvaEbiBC2asv1n8MiGUDbqwa99XeoxNzKpaw9uE4MuDQzI7LwxljECayuVqNParmuX0FzjQFxJBh8vaPZa4FfIixd4gBlxZKN78jawGMi2gMtjbrb3ba9hTSx3qfgCLHR395cCIpC+xT/SqDaTwPIEJn3YYf92mTo4d0qM='
-    aws_region = 'us-east-1'
-    
+    if len(sys.argv) != 5:
+        print("Usage: python lunch.py <aws_access_key_id> <aws_secret_access_key> <aws_session_token> <aws_region>")
+        sys.exit(1)
+
+    aws_access_key_id = sys.argv[1]
+    aws_secret_access_key = sys.argv[2]
+    aws_session_token = sys.argv[3]
+    aws_region = sys.argv[4]
 
     # Create a a boto3 session with credentials 
     aws_console = boto3.session.Session(

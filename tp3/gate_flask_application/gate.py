@@ -3,7 +3,7 @@ import requests
 
 app = Flask(__name__)
 
-th_url = 'http://ip-172-31-91-164.ec2.internal:443'
+th_url = 'http://ip-172-31-80-90.ec2.internal:443'
 
 @app.route('/', methods=['GET', 'POST'])
 def forward_request():
@@ -19,5 +19,5 @@ def forward_request():
         return "Unauthorized", 401
 
 if __name__ == '__main__':
-    # Listen on port 80 for external traffic
-    app.run(host='0.0.0.0', port=80,debug=True)
+    # Listen on port 443 for external traffic
+    app.run(host='0.0.0.0', port=443,debug=True)

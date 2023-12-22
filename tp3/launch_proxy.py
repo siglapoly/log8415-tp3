@@ -43,6 +43,7 @@ def launch_proxy(mgmt_ip, data_nodes_ips):
             'source venv/bin/activate',
             'sudo pip install Flask',
             'sudo pip install requests',
+            'sudo pip install mysql.connector',
             'export flask_application = proxy.py',
             'echo "----------------------- lunching flask app --------------------------------------"',
             'nohup sudo python3 proxy.py > /dev/null 2>&1 &',
@@ -62,34 +63,56 @@ def create_proxy_app_file(instance_id, proxy_flask_directory, mgmt_ip, data_node
     print('CREATING PROXY APP FILE')
     create_file = f'''cat <<EOF > {proxy_flask_directory}/proxy.py
 from flask import Flask, request
-import requests
+import mysql.connector
 import random
 
 app = Flask(__name__)
 
+# Replace these with your actual MySQL Cluster connection details
+mysql_config = dict(
+    #host= 'ip-172-31-63-209.ec2.internal',
+    user= 'simon',
+    password= 'nomis',
+    database= 'sakila',  
+)
+
 @app.route('/', methods=['GET', 'POST'])
 def forward_request():
-    if request.method == 'POST':
-        # Forward GET request to mgmt_ip
-        response = requests.get(f'http://{mgmt_ip}', headers=request.headers, data=request.get_data())
-    elif request.method == 'GET':
-        # Forward POST request to a randomly selected data node
-        selected_ip = 'http://' + str(random.choice({data_nodes_ips}))
-        response = requests.post(selected_ip, headers=request.headers, data=request.get_data())
-    else:
-        # Handle other HTTP methods if needed
-        response = None
+    sql_query = request.get_data(as_text=True)#.upper()
 
-    if response:
-        # Return the response from the target server to the original requester
-        return response.content, response.status_code, response.headers.items()
+    if 'SELECT' in sql_query:
+        responding_instance, result = handle_read_request(sql_query)
+        print('SELECT QUERY')
     else:
-        return "Unsupported HTTP method", 400
+        responding_instance, result = handle_write_request(sql_query)
+        print('WRITE QUERY')
+
+    print("Responding instance: + str(responding_instance)")
+    print("Query result: + str(result)")
+
+    return "Request handled", 200
+
+def handle_read_request(sql_query):
+    selected_ip = random.choice({data_nodes_ips})
+    result = execute_sql_query(sql_query, selected_ip)
+    return selected_ip, result
+
+def handle_write_request(sql_query):
+    result = execute_sql_query(sql_query, '{mgmt_ip}')
+    return mgmt_ip, result
+
+def execute_sql_query(sql_query, host):
+    connection = mysql.connector.connect(**mysql_config, host=host)
+    cursor = connection.cursor(dictionary=True)
+    cursor.execute(sql_query)
+    result = cursor.fetchall()
+    cursor.close()
+    connection.close()
+    return result
 
 if __name__ == '__main__':
-    # Listen on port 80 for external traffic
-    app.run(host='0.0.0.0', port=80, debug=True)
-
+    # Listen on port 443 for internal traffic
+    app.run(host='0.0.0.0', port=443, debug=True)
 EOF'''     
     os.system(create_file)
 
@@ -114,23 +137,14 @@ if __name__ == '__main__':
     global ec2
     global aws_console
 
-    '''
-    print(" \n")          
-    
     if len(sys.argv) != 5:
         print("Usage: python lunch.py <aws_access_key_id> <aws_secret_access_key> <aws_session_token> <aws_region>")
         sys.exit(1)
 
-    aws_access_key_id = sys.argv[2]
-    aws_secret_access_key = sys.argv[3]
-    aws_session_token = sys.argv[4]
-    aws_region = sys.argv[5]
-    '''
- 
-    aws_access_key_id='ASIAQDC3YUDEX6Q2PXWQ'
-    aws_secret_access_key='6dUFJuljb+gozJnSTo5c3ngOzVwFQajlJIi5iGU8'
-    aws_session_token='FwoGZXIvYXdzEJH//////////wEaDD5zzUBYh0Zq10mXEiLIAXnPYjCAoxDjS7C0qDjOzTkthaEZdF4X/laVynyvBJmf3EAabE5HmxI9AU0jsfWxh/x7BuzSEcmnG29QG+u9lAqNstdZnG9i55uRvoYwYsQoIEF+PClYfqaJ3TX8tgV19vHNLXhQ2NzPotoqlIuuXwrcgRe7sz/ld0vuv7tmfISa9lvaEbiBC2asv1n8MiGUDbqwa99XeoxNzKpaw9uE4MuDQzI7LwxljECayuVqNParmuX0FzjQFxJBh8vaPZa4FfIixd4gBlxZKN78jawGMi2gMtjbrb3ba9hTSx3qfgCLHR395cCIpC+xT/SqDaTwPIEJn3YYf92mTo4d0qM='
-    aws_region = 'us-east-1'
+    aws_access_key_id = sys.argv[1]
+    aws_secret_access_key = sys.argv[2]
+    aws_session_token = sys.argv[3]
+    aws_region = sys.argv[4]
     
     
     # Create a a boto3 session with credentials 
@@ -143,10 +157,8 @@ if __name__ == '__main__':
     # Client for ec2 instances
     ec2 = aws_console.client('ec2')
 
-    # Access the file path from command-line arguments
-    cluster_ips_path = sys.argv[1]
-
     # Read the JSON data from the file
+    cluster_ips_path = 'cluster_ips.json'
     with open(cluster_ips_path, 'r') as file:
         output_json = file.read()
     

@@ -72,8 +72,8 @@ def hello_world():
     return 'Hello, World! FROM PROXY '
 
 if __name__ == '__main__':
-    # Listen on port 80 for external traffic
-    app.run(host='0.0.0.0', port=80, debug=True)
+    # Listen on port 443 for external traffic
+    app.run(host='0.0.0.0', port=443, debug=True)
 
 EOF'''     
     os.system(create_file)
@@ -112,9 +112,9 @@ if __name__ == '__main__':
     aws_region = sys.argv[5]
     '''
  
-    aws_access_key_id='ASIAQDC3YUDEX6Q2PXWQ'
-    aws_secret_access_key='6dUFJuljb+gozJnSTo5c3ngOzVwFQajlJIi5iGU8'
-    aws_session_token='FwoGZXIvYXdzEJH//////////wEaDD5zzUBYh0Zq10mXEiLIAXnPYjCAoxDjS7C0qDjOzTkthaEZdF4X/laVynyvBJmf3EAabE5HmxI9AU0jsfWxh/x7BuzSEcmnG29QG+u9lAqNstdZnG9i55uRvoYwYsQoIEF+PClYfqaJ3TX8tgV19vHNLXhQ2NzPotoqlIuuXwrcgRe7sz/ld0vuv7tmfISa9lvaEbiBC2asv1n8MiGUDbqwa99XeoxNzKpaw9uE4MuDQzI7LwxljECayuVqNParmuX0FzjQFxJBh8vaPZa4FfIixd4gBlxZKN78jawGMi2gMtjbrb3ba9hTSx3qfgCLHR395cCIpC+xT/SqDaTwPIEJn3YYf92mTo4d0qM='
+    aws_access_key_id='ASIAQDC3YUDE7MWRKDUF'
+    aws_secret_access_key='uKLcntZhKY7iT5XA9VFGaOZJxbv1Fm9Pal0dYbH2'
+    aws_session_token='FwoGZXIvYXdzEKj//////////wEaDHLWU1wDY5HR4dbQKSLIARxIx5JNjl2VHqP1h0Do2Hr9mkAJ2KUYPo4l+g3ov/+hbYrgfe+PMifZMYdaznazqd+espdJrFFxubedN5ydCnocr95A71pa98TfHyyQp1ZCyX9wjXJqqisBYvZSsCWLWsKE3Sdts98sll5cDuRXvjmp0/9GWwTbSBlgeB0n8l5VleWTHV6k6dsOrrZEmu5L/k8cojkHEI864Oqy0zalpo8E34bJa9Ckseg+HA1uhLn7QcVhTp0AaKRE6tKB9hZpdKpMKVeerSenKKGCk6wGMi2Q1LYhuCVjv6tjhVm7S1XqBVooKHRfgufl961BzSRYU+ZcU9jrszoAiM1c34o='
     aws_region = 'us-east-1'
     
     

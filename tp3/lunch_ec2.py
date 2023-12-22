@@ -16,8 +16,8 @@ def lunch_ec2():
 
     # lunch instances 5 of type t2.micro
     # The instance in zone us-east-1a is for the orchestrator and the 4 other ones are workers
-    #lunched = create_instances('t2.micro',keypair_name,[security_group_id],['us-east-1a','us-east-1b', 'us-east-1c', 'us-east-1d', 'us-east-1e']) 
-    lunched = create_instances('t2.large',keypair_name,[security_group_id],['us-east-1a','us-east-1b', 'us-east-1c']) #gatekeeper, trusted host, proxy
+    lunched = create_instances('t2.micro',keypair_name,[security_group_id],['us-east-1a','us-east-1b', 'us-east-1c', 'us-east-1d', 'us-east-1e']) 
+    #lunched = create_instances('t2.large',keypair_name,[security_group_id],['us-east-1a','us-east-1b', 'us-east-1c']) #gatekeeper, trusted host, proxy
     time.sleep(60) #to make sure init finished before rest
 
 # function that creates and saves an ssh key pair. It also gives read only permission to the file  
@@ -208,7 +208,7 @@ def create_instances(instance_type, keypair_name, security_group_id, availabilit
 if __name__ == '__main__':
     global ec2
     global aws_console
-    '''
+    
     print(" \n")          
     
     if len(sys.argv) != 5:
@@ -219,12 +219,7 @@ if __name__ == '__main__':
     aws_secret_access_key = sys.argv[2]
     aws_session_token = sys.argv[3]
     aws_region = sys.argv[4]
-    '''
- 
-    aws_access_key_id='ASIAQDC3YUDEX6Q2PXWQ'
-    aws_secret_access_key='6dUFJuljb+gozJnSTo5c3ngOzVwFQajlJIi5iGU8'
-    aws_session_token='FwoGZXIvYXdzEJH//////////wEaDD5zzUBYh0Zq10mXEiLIAXnPYjCAoxDjS7C0qDjOzTkthaEZdF4X/laVynyvBJmf3EAabE5HmxI9AU0jsfWxh/x7BuzSEcmnG29QG+u9lAqNstdZnG9i55uRvoYwYsQoIEF+PClYfqaJ3TX8tgV19vHNLXhQ2NzPotoqlIuuXwrcgRe7sz/ld0vuv7tmfISa9lvaEbiBC2asv1n8MiGUDbqwa99XeoxNzKpaw9uE4MuDQzI7LwxljECayuVqNParmuX0FzjQFxJBh8vaPZa4FfIixd4gBlxZKN78jawGMi2gMtjbrb3ba9hTSx3qfgCLHR395cCIpC+xT/SqDaTwPIEJn3YYf92mTo4d0qM='
-    aws_region = 'us-east-1'
+    
     
     # Create a a boto3 session with credentials 
     aws_console = boto3.session.Session(

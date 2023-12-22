@@ -1,1 +1,1 @@
-{"mgmt_ip": "172.31.63.133", "data_nodes_ips": ["172.31.42.19", "172.31.89.250", "172.31.21.238"], "mgmt_public_ip": "ec2-54-162-94-72.compute-1.amazonaws.com"}
+{"mgmt_ip": "172.31.63.209", "data_nodes_ips": ["172.31.87.193", "172.31.19.35", "172.31.9.115"], "mgmt_public_ip": "ec2-100-26-221-204.compute-1.amazonaws.com"}
