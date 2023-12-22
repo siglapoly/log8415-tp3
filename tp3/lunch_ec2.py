@@ -17,7 +17,7 @@ def lunch_ec2():
     # lunch instances 5 of type t2.micro
     # The instance in zone us-east-1a is for the orchestrator and the 4 other ones are workers
     lunched = create_instances('t2.micro',keypair_name,[security_group_id],['us-east-1a','us-east-1b', 'us-east-1c', 'us-east-1d', 'us-east-1e']) 
-    #lunched = create_instances('t2.large',keypair_name,[security_group_id],['us-east-1a','us-east-1b', 'us-east-1c']) #gatekeeper, trusted host, proxy
+    lunched = create_instances('t2.large',keypair_name,[security_group_id],['us-east-1a','us-east-1b', 'us-east-1c']) #gatekeeper, trusted host, proxy
     time.sleep(60) #to make sure init finished before rest
 
 # function that creates and saves an ssh key pair. It also gives read only permission to the file  
